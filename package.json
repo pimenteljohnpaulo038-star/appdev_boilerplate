@@ -46,5 +46,22 @@
     "android": "expo run:android",
     "lint": "expo lint"
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@expo/metro-runtime",
+        "expo",
+        "expo-asset",
+        "expo-build-properties",
+        "expo-constants",
+        "expo-dev-client",
+        "expo-image-picker",
+        "expo-linking",
+        "expo-router",
+        "expo-sharing",
+        "expo-splash-screen"
+      ]
+    }
+  }
 }

@@ -1,96 +1,192 @@
 import { Ionicons } from '@expo/vector-icons';
-import type { Tabs } from 'expo-router';
+import { type Tabs } from 'expo-router';
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SmoothPressable } from '@/components/SmoothPressable';
+import { useOras } from '@/context/OrasContext';
 import { useTheme } from '@/theme';
 
 type TabBarProps = Parameters<NonNullable<React.ComponentProps<typeof Tabs>['tabBar']>>[0];
+
+export const TAB_BAR_HEIGHT = 70;
+export const TAB_BAR_GAP = 12;
+
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
-export const TAB_BAR_HEIGHT = 64;
-export const TAB_BAR_GAP = 12;
-/** This route gets its own round button next to the pill. */
-const SEPARATE_ROUTE = 'chat';
+const TAB_CONFIG: Record<
+  string,
+  { label: string; filled: IconName; outline: IconName; isCenter?: boolean }
+> = {
+  index: { label: 'Home', filled: 'home', outline: 'home-outline' },
+  library: { label: 'Library', filled: 'library', outline: 'library-outline' },
+  study: { label: 'Study', filled: 'sparkles', outline: 'sparkles-outline', isCenter: true },
+  progress: { label: 'Progress', filled: 'stats-chart', outline: 'stats-chart-outline' },
+  profile: { label: 'Profile', filled: 'person', outline: 'person-outline' },
+};
 
-/**
- * Empty tab slots for features you haven't built yet. To make one real:
- * create `src/app/(tabs)/<name>.tsx`, add a <Tabs.Screen> for it in
- * `src/app/(tabs)/_layout.tsx`, then remove its entry here.
- */
-const PLACEHOLDER_TABS: { label: string; icon: IconName }[] = [
-  { label: 'Feature', icon: 'add-circle-outline' },
-  { label: 'Feature', icon: 'add-circle-outline' },
-  { label: 'Feature', icon: 'add-circle-outline' },
-];
-
-/** Floating pill tab bar with a separate round Chat button (Apple-style). */
-export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) {
+export function FloatingTabBar({ state, navigation }: TabBarProps) {
   const theme = useTheme();
+  const { activeTheme, t } = useOras();
   const insets = useSafeAreaInsets();
 
-  const go = (route: (typeof state.routes)[number], focused: boolean) => {
-    const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-    if (!focused && !event.defaultPrevented) navigation.navigate(route.name, route.params);
+  const getTabLabel = (name: string): string => {
+    switch (name) {
+      case 'index':
+        return t.tabHome;
+      case 'library':
+        return t.tabLibrary;
+      case 'study':
+        return t.tabStudy;
+      case 'progress':
+        return t.tabProgress;
+      case 'profile':
+        return t.tabProfile;
+      default:
+        return 'Tab';
+    }
   };
-  const icon = (route: (typeof state.routes)[number], focused: boolean, size: number) =>
-    descriptors[route.key].options.tabBarIcon?.({
-      focused,
-      color: focused ? '#FFFFFF' : theme.textSecondary,
-      size,
+
+  const currentRouteName = state.routes[state.index]?.name;
+  // Hide floating tab bar inside full-screen AI chat screen so keyboard composer has full bottom room
+  if (currentRouteName === 'chat') return null;
+
+  const visibleRoutes = state.routes.filter((r) => TAB_CONFIG[r.name]);
+
+  const go = (route: (typeof state.routes)[number], focused: boolean) => {
+    const event = navigation.emit({
+      type: 'tabPress',
+      target: route.key,
+      canPreventDefault: true,
     });
-
-  const separate = state.routes.find((r) => r.name === SEPARATE_ROUTE);
-  const separateFocused = state.routes[state.index]?.name === SEPARATE_ROUTE;
-
-  if (separateFocused) return null;
+    if (!focused && !event.defaultPrevented) {
+      navigation.navigate(route.name, route.params);
+    }
+  };
 
   return (
     <View
       pointerEvents="box-none"
-      style={[styles.wrap, { bottom: insets.bottom + TAB_BAR_GAP }]}
+      style={[
+        styles.wrap,
+        { bottom: Math.max(insets.bottom, 10) },
+      ]}
     >
-      <View style={[styles.pill, { backgroundColor: theme.card, borderColor: theme.border }]}>
-        {state.routes
-          .filter((r) => r.name !== SEPARATE_ROUTE)
-          .map((route) => {
-            const focused = state.routes[state.index]?.key === route.key;
-            const { title } = descriptors[route.key].options;
+      <View
+        // @ts-ignore web className
+        className="depth-glass"
+        style={[
+          styles.bar,
+          {
+            backgroundColor: theme.isDark
+              ? 'rgba(19, 28, 62, 0.94)'
+              : 'rgba(255, 255, 255, 0.94)',
+            borderColor: theme.isDark
+              ? 'rgba(99, 102, 241, 0.32)'
+              : 'rgba(226, 232, 240, 0.95)',
+            shadowColor: theme.isDark ? '#020617' : '#1E3A8A',
+          },
+        ]}
+      >
+        {visibleRoutes.map((route) => {
+          const cfg = TAB_CONFIG[route.name];
+          if (!cfg) return null;
+          const focused = state.routes[state.index]?.key === route.key;
+
+          if (cfg.isCenter) {
             return (
               <SmoothPressable
                 key={route.key}
                 onPress={() => go(route, focused)}
-                accessibilityLabel={title ?? route.name}
                 accessibilityRole="tab"
+                accessibilityLabel="Study and Ask OrasOras AI"
                 accessibilityState={{ selected: focused }}
-                style={[styles.item, focused ? { backgroundColor: theme.buttonPrimary, borderRadius: TAB_BAR_HEIGHT / 2 } : undefined]}
+                style={styles.centerItemWrap}
               >
-                {icon(route, focused, 25)}
-                <Text style={[styles.label, { color: focused ? '#FFFFFF' : theme.textSecondary }]}>
-                  {title ?? route.name}
+                <View
+                  // @ts-ignore web className
+                  className="icon-3d"
+                  style={[
+                    styles.centerOrb,
+                    {
+                      backgroundColor: activeTheme.primary,
+                      shadowColor: activeTheme.primary,
+                      transform: [{ translateY: focused ? -10 : -7 }],
+                      ...Platform.select({
+                        web: {
+                          backgroundImage: `linear-gradient(135deg, ${activeTheme.primary} 0%, ${activeTheme.secondary} 100%)`,
+                        } as unknown as object,
+                      }),
+                    },
+                  ]}
+                >
+                  <View style={styles.centerOrbGloss} />
+                  <Ionicons name={focused ? cfg.filled : cfg.outline} size={23} color="#FFFFFF" />
+                </View>
+                <Text
+                  style={[
+                    styles.centerLabel,
+                    {
+                      color: focused ? activeTheme.primary : theme.textSecondary,
+                      fontWeight: focused ? '800' : '700',
+                    },
+                  ]}
+                >
+                  {getTabLabel(route.name)}
                 </Text>
               </SmoothPressable>
             );
-          })}
-        {PLACEHOLDER_TABS.map((t, i) => (
-          <View key={i} accessible={false} importantForAccessibility="no-hide-descendants" style={[styles.item, styles.placeholder]}>
-            <Ionicons name={t.icon} size={25} color={theme.textSecondary} />
-            <Text style={[styles.label, { color: theme.textSecondary }]}>{t.label}</Text>
-          </View>
-        ))}
+          }
+
+          return (
+            <SmoothPressable
+              key={route.key}
+              onPress={() => go(route, focused)}
+              accessibilityRole="tab"
+              accessibilityLabel={getTabLabel(route.name)}
+              accessibilityState={{ selected: focused }}
+              style={styles.tabItem}
+            >
+              <View
+                style={[
+                  styles.iconBadge,
+                  focused && {
+                    backgroundColor: theme.isDark
+                      ? 'rgba(59, 130, 246, 0.22)'
+                      : 'rgba(59, 130, 246, 0.13)',
+                    transform: [{ translateY: -2 }],
+                  },
+                ]}
+              >
+                <Ionicons
+                  name={focused ? cfg.filled : cfg.outline}
+                  size={20}
+                  color={focused ? activeTheme.primary : theme.textMuted}
+                />
+              </View>
+              <Text
+                style={[
+                  styles.label,
+                  {
+                    color: focused ? activeTheme.primary : theme.textMuted,
+                    fontWeight: focused ? '800' : '600',
+                  },
+                ]}
+              >
+                {getTabLabel(route.name)}
+              </Text>
+              {focused && (
+                <View
+                  style={[
+                    styles.activeIndicatorDot,
+                    { backgroundColor: activeTheme.primary },
+                  ]}
+                />
+              )}
+            </SmoothPressable>
+          );
+        })}
       </View>
-      {separate && (
-        <SmoothPressable
-          onPress={() => go(separate, separateFocused)}
-          accessibilityRole="tab"
-          accessibilityLabel={descriptors[separate.key].options.title ?? separate.name}
-          accessibilityState={{ selected: separateFocused }}
-          style={[styles.circle, { backgroundColor: separateFocused ? theme.buttonPrimary : theme.card, borderColor: separateFocused ? theme.buttonPrimary : theme.border }]}
-        >
-          {icon(separate, separateFocused, 27)}
-        </SmoothPressable>
-      )}
     </View>
   );
 }
@@ -98,42 +194,82 @@ export function FloatingTabBar({ state, descriptors, navigation }: TabBarProps) 
 const styles = StyleSheet.create({
   wrap: {
     position: 'absolute',
-    left: 0,
-    right: 0,
+    left: 12,
+    right: 12,
+    alignItems: 'center',
+    zIndex: 40,
+  },
+  bar: {
+    width: '100%',
+    maxWidth: 460,
+    height: TAB_BAR_HEIGHT,
+    borderRadius: 26,
+    borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 16,
-  },
-  pill: {
-    flex: 1,
-    flexDirection: 'row',
-    height: TAB_BAR_HEIGHT,
-    borderRadius: TAB_BAR_HEIGHT / 2,
+    justifyContent: 'space-around',
     paddingHorizontal: 6,
-    borderWidth: StyleSheet.hairlineWidth,
-    ...shadow(),
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.14,
+    shadowRadius: 24,
+    elevation: 10,
   },
-  circle: {
-    width: TAB_BAR_HEIGHT,
-    height: TAB_BAR_HEIGHT,
-    borderRadius: TAB_BAR_HEIGHT / 2,
+  tabItem: {
+    flex: 1,
+    minHeight: 54,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: StyleSheet.hairlineWidth,
-    ...shadow(),
+    gap: 2,
+    position: 'relative',
   },
-  item: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 2, marginVertical: 4 },
-  placeholder: { opacity: 1 },
-  label: { fontSize: 12, fontWeight: '500' },
-});
-
-function shadow() {
-  return {
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
+  iconBadge: {
+    width: 38,
+    height: 30,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  label: {
+    fontSize: 10.5,
+    letterSpacing: -0.1,
+  },
+  activeIndicatorDot: {
+    width: 14,
+    height: 3,
+    borderRadius: 2,
+    marginTop: 1,
+  },
+  centerItemWrap: {
+    flex: 1.15,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 58,
+  },
+  centerOrb: {
+    width: 50,
+    height: 50,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.88)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.38,
     shadowRadius: 16,
-    shadowOffset: { width: 0, height: 6 },
-    elevation: 3,
-  };
-}
+    elevation: 8,
+    overflow: 'hidden',
+  },
+  centerOrbGloss: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: '45%',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+  },
+  centerLabel: {
+    fontSize: 10.5,
+    marginTop: -4,
+    letterSpacing: -0.1,
+  },
+});

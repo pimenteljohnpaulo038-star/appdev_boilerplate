@@ -1,12 +1,34 @@
 import { useSettings } from '@/settings/SettingsContext';
 
 export interface Theme {
+  isDark: boolean;
   background: string;
+  backgroundAlt: string;
   card: string;
+  cardGlass: string;
+  surface: string;
+  surfaceElevated: string;
   text: string;
+  navy: string;
   textSecondary: string;
+  textMuted: string;
   border: string;
+  borderHighlight: string;
   tint: string;
+  primary: string;
+  primaryDark: string;
+  primaryLight: string;
+  indigo: string;
+  indigoLight: string;
+  emerald: string;
+  emeraldLight: string;
+  amber: string;
+  amberLight: string;
+  red: string;
+  redLight: string;
+  accentViolet: string;
+  accentCyan: string;
+  accentCyanLight: string;
   buttonPrimary: string;
   buttonSecondary: string;
   buttonDanger: string;
@@ -17,44 +39,91 @@ export interface Theme {
   userBubbleText: string;
   assistantBubble: string;
   inputBackground: string;
+  shadowColor: string;
 }
 
 const light: Theme = {
-  background: '#FFFFFF',
-  card: '#F2F2F7',
-  text: '#111111',
-  textSecondary: '#6B6B70',
-  border: '#D8D8DE',
-  tint: '#0066CC',
-  buttonPrimary: '#0066CC',
-  buttonSecondary: '#E6E8EE',
-  buttonDanger: '#BA2525',
-  danger: '#B42323',
-  success: '#2E7D32',
-  warning: '#A14800',
-  userBubble: '#0066CC',
+  isDark: false,
+  background: '#F4F7FF',
+  backgroundAlt: '#EDF2FF',
+  card: '#FFFFFF',
+  cardGlass: 'rgba(255, 255, 255, 0.85)',
+  surface: '#F1F5FF',
+  surfaceElevated: '#FFFFFF',
+  text: '#0F172A',
+  navy: '#0F172A',
+  textSecondary: '#475569',
+  textMuted: '#64748B',
+  border: 'rgba(148, 163, 184, 0.24)',
+  borderHighlight: 'rgba(255, 255, 255, 0.9)',
+  tint: '#3B82F6',
+  primary: '#3B82F6',
+  primaryDark: '#2563EB',
+  primaryLight: '#EFF6FF',
+  indigo: '#6366F1',
+  indigoLight: '#EEF2FF',
+  emerald: '#10B981',
+  emeraldLight: '#ECFDF5',
+  amber: '#F59E0B',
+  amberLight: '#FFFBEB',
+  red: '#EF4444',
+  redLight: '#FEF2F2',
+  accentViolet: '#6366F1',
+  accentCyan: '#06B6D4',
+  accentCyanLight: '#ECFEFF',
+  buttonPrimary: '#3B82F6',
+  buttonSecondary: '#EEF2FF',
+  buttonDanger: '#EF4444',
+  danger: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+  userBubble: '#3B82F6',
   userBubbleText: '#FFFFFF',
-  assistantBubble: '#E9E9EE',
-  inputBackground: '#F2F2F7',
+  assistantBubble: '#FFFFFF',
+  inputBackground: '#FFFFFF',
+  shadowColor: '#1E3A8A',
 };
 
 const dark: Theme = {
-  background: '#0E0E12',
-  card: '#1C1C22',
-  text: '#F2F2F5',
-  textSecondary: '#9A9AA3',
-  border: '#2E2E38',
-  tint: '#70B7FF',
-  buttonPrimary: '#0A65C7',
-  buttonSecondary: '#303038',
-  buttonDanger: '#BA2525',
-  danger: '#FF8885',
-  success: '#66BB6A',
-  warning: '#FFA726',
-  userBubble: '#1C6FD1',
+  isDark: true,
+  background: '#0A0F24',
+  backgroundAlt: '#0F1736',
+  card: '#131C3E',
+  cardGlass: 'rgba(22, 33, 72, 0.82)',
+  surface: '#1A2550',
+  surfaceElevated: '#1F2D61',
+  text: '#F8FAFC',
+  navy: '#F8FAFC',
+  textSecondary: '#CBD5E1',
+  textMuted: '#94A3B8',
+  border: 'rgba(99, 102, 241, 0.26)',
+  borderHighlight: 'rgba(255, 255, 255, 0.12)',
+  tint: '#3B82F6',
+  primary: '#3B82F6',
+  primaryDark: '#2563EB',
+  primaryLight: '#1E295B',
+  indigo: '#6366F1',
+  indigoLight: '#23275E',
+  emerald: '#10B981',
+  emeraldLight: 'rgba(16, 185, 129, 0.18)',
+  amber: '#F59E0B',
+  amberLight: 'rgba(245, 158, 11, 0.18)',
+  red: '#EF4444',
+  redLight: 'rgba(239, 68, 68, 0.18)',
+  accentViolet: '#818CF8',
+  accentCyan: '#22D3EE',
+  accentCyanLight: 'rgba(34, 211, 238, 0.16)',
+  buttonPrimary: '#3B82F6',
+  buttonSecondary: '#1E295B',
+  buttonDanger: '#EF4444',
+  danger: '#F87171',
+  success: '#34D399',
+  warning: '#FBBF24',
+  userBubble: '#3B82F6',
   userBubbleText: '#FFFFFF',
-  assistantBubble: '#23232C',
-  inputBackground: '#1C1C22',
+  assistantBubble: '#1A2550',
+  inputBackground: '#131C3E',
+  shadowColor: '#020617',
 };
 
 export function useTheme(): Theme {

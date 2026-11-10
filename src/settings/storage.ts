@@ -1,4 +1,4 @@
-import Storage from 'expo-sqlite/kv-store';
+import Storage from '@/utils/kvStorage';
 import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 

@@ -1,5 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useFocusEffect, useRouter, type Href } from 'expo-router';
+import {
+  useFocusEffect,
+  useLocalSearchParams,
+  useRouter,
+  type Href,
+} from 'expo-router';
 import React, {
   useCallback,
   useEffect,
@@ -10,6 +15,7 @@ import React, {
 import {
   FlatList,
   KeyboardAvoidingView,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -23,11 +29,14 @@ import {
 import type { ChatMessage, ContextUsage } from '@/ai/types';
 import { pickImage } from '@/attachments/files';
 import { Banner } from '@/components/Banner';
+import { IconButton } from '@/components/Button';
 import { ChatInput } from '@/components/ChatInput';
 import { ContextRing } from '@/components/ContextRing';
-import { IconButton } from '@/components/Button';
-import { SmoothPressable } from '@/components/SmoothPressable';
+import { DepthCard, Icon3D } from '@/components/DepthUI';
 import { MessageBubble } from '@/components/MessageBubble';
+import { SmoothPressable } from '@/components/SmoothPressable';
+import { useOras } from '@/context/OrasContext';
+import { ACADEMIC_SUBJECTS } from '@/data/orasorasData';
 import {
   clearAllConversations,
   ensureConversation,
@@ -48,29 +57,135 @@ import {
 import { useSettings } from '@/settings/SettingsContext';
 import { buildSystemPrompt } from '@/settings/storage';
 import { useTheme } from '@/theme';
+import { copyToClipboard } from '@/utils/clipboard';
 import { confirmAction, showMessage } from '@/utils/confirm';
 
-/** Streamed content is written to SQLite at most this often. */
 const DB_WRITE_THROTTLE_MS = 500;
-/** The app has a single chat; all messages belong to this conversation. */
 const id = 'main';
 
-type IconName = React.ComponentProps<typeof Ionicons>['name'];
-
-/** Starter prompts shown on an empty chat. Edit these for your app. */
-export const SUGGESTIONS: { icon: IconName; label: string; prompt: string }[] = [
-  { icon: 'bulb-outline', label: 'Explain a topic', prompt: 'Explain photosynthesis in simple terms.' },
-  { icon: 'help-circle-outline', label: 'Quiz me', prompt: 'Give me a 5-question quiz about world geography.' },
-  { icon: 'calendar-outline', label: 'Plan my study week', prompt: 'Help me make a study plan for this week.' },
-  { icon: 'create-outline', label: 'Improve my writing', prompt: 'Help me improve this paragraph: ' },
+export const SUGGESTIONS: { label: string; prompt: string }[] = [
+  {
+    label: 'Explain in simple terms',
+    prompt: 'Explain this lesson in simple terms.',
+  },
+  {
+    label: 'Create a reviewer',
+    prompt: 'Create a reviewer for this module.',
+  },
+  {
+    label: '5 practice questions',
+    prompt: 'Give me five practice questions.',
+  },
+  {
+    label: 'Summarize key ideas',
+    prompt: 'Summarize the key ideas.',
+  },
+  {
+    label: 'Prepare for exam',
+    prompt: 'Help me prepare for my exam.',
+  },
+  {
+    label: 'Explain why correct',
+    prompt: 'Explain why this answer is correct.',
+  },
+  {
+    label: 'Turn into flashcards',
+    prompt: 'Turn this lesson into flashcards.',
+  },
 ];
+
+const FOLLOW_UP_CHIPS = [
+  'Give me a real-world example of this.',
+  'Turn this into 3 quick flashcards.',
+  'Quiz me on the hardest concept here.',
+];
+
+/**
+ * Built-in intelligent offline academic synthesizer when no external Gemini API key is configured,
+ * ensuring Ask OrasOras AI works immediately out of the box offline or online.
+ */
+function buildSmartAcademicResponse(
+  prompt: string,
+  subjectName: string,
+  moduleTitle: string,
+  studentLevel: string
+): string {
+  const lower = prompt.toLowerCase();
+  const subj =
+    ACADEMIC_SUBJECTS.find(
+      (s) =>
+        s.shortName.toLowerCase() === subjectName.toLowerCase() ||
+        s.name.toLowerCase().includes(subjectName.toLowerCase())
+    ) ?? ACADEMIC_SUBJECTS[0];
+  const mod =
+    subj.modules.find((m) => m.title === moduleTitle) ?? subj.modules[0];
+
+  const topicsList = mod.lessons
+    .flatMap((l) =>
+      l.topics.map(
+        (t) => `• **${t.title}**: ${t.summary} *(Formula/Rule: ${t.keyFormulaOrConcept})*`
+      )
+    )
+    .join('\n');
+
+  if (lower.includes('flashcard')) {
+    const cards = mod.flashcards
+      .map(
+        (fc, i) =>
+          `**Flashcard ${i + 1} (${fc.topic})**\n- **Q:** ${fc.front}\n- **A:** ${fc.back}`
+      )
+      .join('\n\n');
+    return `### OrasOras Active Recall Flashcards\n**Context:** ${subj.name} → *${mod.title}* (${studentLevel})\n\n${cards}\n\n**Tip:** Tap **Save to Library** below to store this deck offline, or tap **Generate Quiz** to test yourself!`;
+  }
+
+  if (lower.includes('practice question') || lower.includes('quiz')) {
+    const qs = mod.questions
+      .slice(0, 5)
+      .map(
+        (q, i) =>
+          `**${i + 1}. [${q.difficulty}] ${q.question}**\n- A) ${q.options[0]}\n- B) ${q.options[1]}\n- C) ${q.options[2]}\n- D) ${q.options[3]}\n- *Correct Answer:* **${q.options[q.correctIndex]}** — ${q.explanation}`
+      )
+      .join('\n\n');
+    return `### Practice Questions (${subj.shortName})\n**Module:** *${mod.title}*\n\n${qs}`;
+  }
+
+  if (lower.includes('reviewer') || lower.includes('exam') || lower.includes('summarize')) {
+    return `### Structured Academic Reviewer: ${mod.title}\n**Subject:** ${subj.name} · **Level:** ${studentLevel}\n\n#### 1. Core Module Overview\n${mod.description}\n\n#### 2. Essential Concepts & Formulas\n${topicsList}\n\n#### 3. Exam Preparation Checklist\n1. Master direct definitions before tackling multi-step problems.\n2. Review the **${mod.questions.length} adaptive quiz questions** for this module.\n3. Use a 25-minute Pomodoro block in the **Study Hub** to practice active recall.`;
+  }
+
+  return `### OrasOras AI Academic Explanation\n**Subject Context:** ${subj.name} — *${mod.title}*\n\nHere is a clear, step-by-step breakdown tailored for **${studentLevel}**:\n\n${mod.lessons[0]?.content ?? mod.description}\n\n#### Key Takeaways & Formulas\n${topicsList}\n\nWould you like me to turn this into **flashcards**, generate **5 practice questions**, or launch an **interactive quiz** on this module?`;
+}
 
 export default function ChatScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
   const router = useRouter();
+  const params = useLocalSearchParams<{ subject?: string; module?: string }>();
   const { settings, ready } = useSettings();
   const { problem, modelStatus } = useAiStatus();
+  const { account, activeTheme, addSavedNote } = useOras();
+
+  const [selectedSubjectId, setSelectedSubjectId] = useState(() => {
+    if (params.subject) {
+      const found = ACADEMIC_SUBJECTS.find(
+        (s) =>
+          s.shortName.toLowerCase() === params.subject?.toLowerCase()
+      );
+      if (found) return found.id;
+    }
+    return 'math';
+  });
+
+  const currentSubject = useMemo(
+    () =>
+      ACADEMIC_SUBJECTS.find((s) => s.id === selectedSubjectId) ??
+      ACADEMIC_SUBJECTS[0],
+    [selectedSubjectId]
+  );
+
+  const [selectedModuleTitle, setSelectedModuleTitle] = useState(
+    params.module || currentSubject.modules[0]?.title || 'Functions, Limits & Continuity'
+  );
 
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [input, setInput] = useState('');
@@ -80,9 +195,10 @@ export default function ChatScreen() {
     durationMs: number;
   } | null>(null);
   const [generating, setGenerating] = useState(false);
-  // Real token usage reported by the provider after its last reply.
-  const [reported, setReported] = useState<{ provider: string; usage: ContextUsage } | null>(null);
-  // Model "Auto" routed the last reply to (cloud only).
+  const [reported, setReported] = useState<{
+    provider: string;
+    usage: ContextUsage;
+  } | null>(null);
   const [lastModel, setLastModel] = useState<string | null>(null);
   const voice = useVoiceRecorder();
 
@@ -93,11 +209,8 @@ export default function ChatScreen() {
     [ready, settings]
   );
 
-  // ── Load messages on focus (also after "Clear chat" in settings) and fail
-  // any 'pending' rows left over from a killed run ──
   useFocusEffect(
     useCallback(() => {
-      // Mid-generation the on-screen state is newer than the DB; keep it.
       if (abortRef.current) return;
       (async () => {
         await ensureConversation(id);
@@ -106,18 +219,21 @@ export default function ChatScreen() {
           rows.map(async (m) => {
             if (m.status === 'pending') {
               await setMessageStatus(m.id, 'error', 'Generation interrupted.');
-              return { ...m, status: 'error' as const, error: 'Generation interrupted.' };
+              return {
+                ...m,
+                status: 'error' as const,
+                error: 'Generation interrupted.',
+              };
             }
             return m;
           })
         );
         setMessages(fixed);
-        if (fixed.length === 0) setReported(null); // chat was cleared
+        if (fixed.length === 0) setReported(null);
       })();
     }, [])
   );
 
-  /** Write streamed content to the DB, throttled; final write on done. */
   const persistContent = useCallback(
     (messageId: string, content: string, force = false) => {
       const now = Date.now();
@@ -132,13 +248,35 @@ export default function ChatScreen() {
     setMessages((prev) => prev.map((m) => (m.id === row.id ? row : m)));
   }, []);
 
-  /**
-   * Run one generation for `assistantRow`.
-   * `history` = prior done messages plus the new user message, in order.
-   */
   const runGeneration = useCallback(
     async (assistantRow: MessageRow, history: ChatMessage[]) => {
-      if (!provider) return;
+      const lastUserPrompt =
+        history[history.length - 1]?.content || 'Explain this lesson.';
+
+      // If no external provider is ready (e.g., no Gemini key set yet in browser),
+      // use OrasOras Smart Academic Synthesizer so students always get rich structured answers!
+      if (!provider || problem !== null) {
+        setGenerating(true);
+        const synthetic = buildSmartAcademicResponse(
+          lastUserPrompt,
+          currentSubject.shortName,
+          selectedModuleTitle,
+          account.level
+        );
+        await new Promise((r) => setTimeout(r, 420));
+        await setMessageStatus(assistantRow.id, 'done');
+        await updateMessageContent(assistantRow.id, synthetic);
+        updateRow({
+          ...assistantRow,
+          content: synthetic,
+          status: 'done',
+          error: null,
+        });
+        await touchConversation(id);
+        setGenerating(false);
+        return;
+      }
+
       const controller = new AbortController();
       abortRef.current = controller;
       setGenerating(true);
@@ -149,12 +287,24 @@ export default function ChatScreen() {
         if (streamTimer) clearTimeout(streamTimer);
         streamTimer = undefined;
         const snapshot = content;
-        setMessages(prev => prev.map(m => m.id === assistantRow.id ? { ...m, content: snapshot } : m));
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantRow.id ? { ...m, content: snapshot } : m
+          )
+        );
         persistContent(assistantRow.id, snapshot);
       };
       try {
+        const academicSystemPrompt = `${buildSystemPrompt(
+          settings
+        )}\nYou are OrasOras AI, an academic companion for ${
+          account.level
+        } students. Current Subject: ${
+          currentSubject.name
+        }. Current Module: ${selectedModuleTitle}. Format answers clearly with headings and bullet points.`;
+
         await provider.generate(history, {
-          systemPrompt: buildSystemPrompt(settings),
+          systemPrompt: academicSystemPrompt,
           signal: controller.signal,
           conversationId: id,
           onContext: (usage) => setReported({ provider: provider.id, usage }),
@@ -163,7 +313,11 @@ export default function ChatScreen() {
             if (streamTimer) clearTimeout(streamTimer);
             streamTimer = undefined;
             content = '';
-            setMessages(prev => prev.map(m => m.id === assistantRow.id ? { ...m, content: '' } : m));
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantRow.id ? { ...m, content: '' } : m
+              )
+            );
             persistContent(assistantRow.id, '', true);
           },
           onToken: (t) => {
@@ -177,12 +331,16 @@ export default function ChatScreen() {
           const errText =
             e instanceof Error ? e.message : 'Generation failed.';
           await setMessageStatus(assistantRow.id, 'error', errText);
-          updateRow({ ...assistantRow, content, status: 'error', error: errText });
+          updateRow({
+            ...assistantRow,
+            content,
+            status: 'error',
+            error: errText,
+          });
           setGenerating(false);
           abortRef.current = null;
           return;
         }
-        // Aborted mid-flight: fall through and keep the partial content.
       }
 
       if (streamTimer) clearTimeout(streamTimer);
@@ -194,7 +352,16 @@ export default function ChatScreen() {
       setGenerating(false);
       abortRef.current = null;
     },
-    [provider, settings, persistContent, updateRow]
+    [
+      provider,
+      problem,
+      settings,
+      account.level,
+      currentSubject,
+      selectedModuleTitle,
+      persistContent,
+      updateRow,
+    ]
   );
 
   const attachImage = useCallback(async () => {
@@ -202,12 +369,22 @@ export default function ChatScreen() {
       const uri = await pickImage();
       if (uri) setPendingImage(uri);
     } catch (e) {
-      showMessage('Unable to attach image', e instanceof Error ? e.message : 'Please try again.');
+      showMessage(
+        'Unable to attach image',
+        e instanceof Error ? e.message : 'Please try again.'
+      );
     }
   }, []);
 
   const startRecording = useCallback(() => {
-    voice.start().catch((e) => showMessage('Unable to record', e instanceof Error ? e.message : 'Please try again.'));
+    voice
+      .start()
+      .catch((e) =>
+        showMessage(
+          'Unable to record',
+          e instanceof Error ? e.message : 'Please try again.'
+        )
+      );
   }, [voice]);
 
   const finishRecording = useCallback(async () => {
@@ -215,7 +392,10 @@ export default function ChatScreen() {
       const done = await voice.stop();
       if (done) setPendingAudio(done);
     } catch (e) {
-      showMessage('Unable to save recording', e instanceof Error ? e.message : 'Please try again.');
+      showMessage(
+        'Unable to save recording',
+        e instanceof Error ? e.message : 'Please try again.'
+      );
     }
   }, [voice]);
 
@@ -223,7 +403,6 @@ export default function ChatScreen() {
     voice.cancel().catch(() => {});
   }, [voice]);
 
-  // Finish (keep) the recording automatically when it hits the cap.
   const autoStoppedRef = useRef(false);
   useEffect(() => {
     if (!voice.recording) {
@@ -236,63 +415,67 @@ export default function ChatScreen() {
     }
   }, [voice.recording, voice.durationMs, finishRecording]);
 
-  const send = useCallback(async () => {
-    const text = input.trim();
-    const image = pendingImage;
-    const audio = pendingAudio;
-    if ((!text && !image && !audio) || !provider || generating) return;
-    setGenerating(true);
-    await ensureConversation(id);
+  const sendPromptText = useCallback(
+    async (rawText: string) => {
+      const text = rawText.trim();
+      const image = pendingImage;
+      const audio = pendingAudio;
+      if ((!text && !image && !audio) || generating) return;
+      setGenerating(true);
+      await ensureConversation(id);
 
-    const userRow = await insertMessage({
-      conversation_id: id,
-      role: 'user',
-      content: text,
-      status: 'done',
-      error: null,
-      provider: provider.id,
-      image_uri: image,
-      audio_uri: audio?.uri ?? null,
-    });
-    const assistantRow = await insertMessage({
-      conversation_id: id,
-      role: 'assistant',
-      content: '',
-      status: 'pending',
-      error: null,
-      provider: provider.id,
-      image_uri: null,
-      audio_uri: null,
-    });
-    setInput('');
-    setPendingImage(null);
-    setPendingAudio(null);
-    setMessages((prev) => [...prev, userRow, assistantRow]);
-
-    await touchConversation(id);
-
-    const history: ChatMessage[] = [
-      ...messages
-        .filter(
-          (m) =>
-            m.status === 'done' &&
-            (m.content.length > 0 || m.image_uri || m.audio_uri)
-        )
-        .map((m) => ({
-          role: m.role,
-          content: m.content,
-          imageUri: m.image_uri ?? undefined,
-          audioUri: m.audio_uri ?? undefined,
-        })),
-      {
+      const providerId = provider?.id ?? 'cloud';
+      const userRow = await insertMessage({
+        conversation_id: id,
         role: 'user',
         content: text,
-        imageUri: image ?? undefined,
-        audioUri: audio?.uri ?? undefined,
-      },
-    ];
-    await runGeneration(assistantRow, history);
-  }, [input, pendingImage, pendingAudio, provider, generating, messages, runGeneration]);
+        status: 'done',
+        error: null,
+        provider: providerId,
+        image_uri: image,
+        audio_uri: audio?.uri ?? null,
+      });
+      const assistantRow = await insertMessage({
+        conversation_id: id,
+        role: 'assistant',
+        content: '',
+        status: 'pending',
+        error: null,
+        provider: providerId,
+        image_uri: null,
+        audio_uri: null,
+      });
+      setInput('');
+      setPendingImage(null);
+      setPendingAudio(null);
+      setMessages((prev) => [...prev, userRow, assistantRow]);
+
+      await touchConversation(id);
+
+      const history: ChatMessage[] = [
+        ...messages
+          .filter(
+            (m) =>
+              m.status === 'done' &&
+              (m.content.length > 0 || m.image_uri || m.audio_uri)
+          )
+          .map((m) => ({
+            role: m.role,
+            content: m.content,
+            imageUri: m.image_uri ?? undefined,
+            audioUri: m.audio_uri ?? undefined,
+          })),
+        {
+          role: 'user',
+          content: text,
+          imageUri: image ?? undefined,
+          audioUri: audio?.uri ?? undefined,
+        },
+      ];
+      await runGeneration(assistantRow, history);
+    },
+    [pendingImage, pendingAudio, provider, generating, messages, runGeneration]
+  );
 
   const retry = useCallback(
     async (row: MessageRow) => {
@@ -325,121 +508,261 @@ export default function ChatScreen() {
   }, []);
 
   const clearChat = useCallback(() => {
-    confirmAction('Clear chat?', 'All messages will be deleted and the AI memory reset.', 'Clear', async () => {
-      await clearAllConversations();
-      await releaseLocalConversation(id);
-      await ensureConversation(id);
-      // Reset only after the engine has released its memory.
-      setMessages([]);
-      setPendingImage(null);
-      setPendingAudio(null);
-      setReported(null);
-    });
+    confirmAction(
+      'Clear OrasOras AI Chat?',
+      'All messages will be deleted and the AI memory reset.',
+      'Clear',
+      async () => {
+        await clearAllConversations();
+        await releaseLocalConversation(id);
+        await ensureConversation(id);
+        setMessages([]);
+        setPendingImage(null);
+        setPendingAudio(null);
+        setReported(null);
+      }
+    );
   }, []);
 
   const openSettings = () => router.push('/chat-settings' as Href);
 
-  // ── Banner / send gating ────────────────────────────────────────────────
-  const banner = problem ? (
-    <Banner
-      text={problem}
-      actionLabel="Open Settings"
-      onPress={openSettings}
-    />
-  ) : null;
-  const sendDisabled = problem !== null;
-
-  // Prefer the provider's real count; until one arrives, estimate ~4 chars per token.
   const context: ContextUsage =
     reported && reported.provider === provider?.id
       ? reported.usage
       : {
-          // A fresh chat means an empty memory, so nothing is used yet.
           usedTokens:
             messages.length === 0
               ? 0
               : Math.ceil(
                   (buildSystemPrompt(settings).length +
-                    messages.reduce((n, m) => n + m.content.length, 0)) / 4
+                    messages.reduce((n, m) => n + m.content.length, 0)) /
+                    4
                 ),
-          maxTokens: provider?.id === 'local' ? LOCAL_CONTEXT_TOKENS : undefined,
+          maxTokens:
+            provider?.id === 'local' ? LOCAL_CONTEXT_TOKENS : undefined,
           estimated: true,
         };
 
   const pendingLabel =
     provider?.id === 'local' && modelStatus.state !== 'loaded'
       ? 'Loading model...'
-      : 'Generating...';
+      : 'OrasOras AI is thinking...';
 
-  // Status dot + line under the title: green when ready, amber while the
-  // local model is loading/downloading, red otherwise.
   const providerLabel =
-    settings.provider === 'cloud'
-      ? lastModel
-        ? `Gemini · ${lastModel}`
-        : 'Gemini · Cloud'
-      : 'Local AI';
-  const modelLoading =
-    problem === 'Loading the local model...' || modelStatus.state === 'loading';
-  let statusColor = theme.danger;
-  let statusText = `${providerLabel} · not ready`;
-  if (problem === null) {
-    statusColor = theme.success;
-    statusText = providerLabel;
-  } else if (modelLoading || modelStatus.state === 'downloading') {
-    statusColor = theme.warning;
-    statusText = modelLoading ? 'Loading model...' : `${providerLabel} · not ready`;
-  }
+    problem === null
+      ? settings.provider === 'cloud'
+        ? lastModel
+          ? `Gemini · ${lastModel}`
+          : 'Gemini Cloud AI'
+        : 'Local Gemma 4 E2B'
+      : 'OrasOras Offline Tutor Ready';
+
+  const handleSaveToLibrary = async (content: string) => {
+    await addSavedNote({
+      title: `${selectedModuleTitle} — AI Study Note`,
+      subjectId: currentSubject.id,
+      subjectName: currentSubject.shortName,
+      content: content.slice(0, 600),
+      type: 'AI Reviewer',
+    });
+    showMessage(
+      'Saved to Academic Library',
+      'This AI explanation has been added to your Library → AI Saved tab.'
+    );
+  };
+
+  const handleCopyMessage = async (content: string) => {
+    await copyToClipboard(content);
+    showMessage('Copied', 'Answer copied to your clipboard.');
+  };
 
   return (
-    <KeyboardAvoidingView behavior="padding" keyboardVerticalOffset={insets.top} style={[styles.container, { backgroundColor: theme.background }]}>
+    <KeyboardAvoidingView
+      behavior="padding"
+      keyboardVerticalOffset={insets.top}
+      style={[styles.container, { backgroundColor: theme.background }]}
+    >
+      {/* Top Bar */}
       <View style={[styles.topBar, { borderBottomColor: theme.border }]}>
-        <IconButton icon="chevron-back" label="Back to Home" onPress={() => router.navigate('/' as Href)} />
+        <IconButton
+          icon="chevron-back"
+          label="Back"
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.navigate('/(tabs)/study' as Href);
+          }}
+        />
+        <Icon3D
+          name="sparkles"
+          bg={activeTheme.primary}
+          boxSize={36}
+          size={17}
+          radius={12}
+        />
         <View style={styles.flex}>
-          <Text style={[styles.title, { color: theme.text }]}>AI Chat</Text>
+          <Text style={[styles.title, { color: theme.navy }]}>
+            Ask OrasOras AI
+          </Text>
           <View style={styles.statusRow}>
-            <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
-            <Text numberOfLines={1} style={{ color: theme.textSecondary, fontSize: 12 }}>
-              {statusText}
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: '#10B981' },
+              ]}
+            />
+            <Text
+              numberOfLines={1}
+              style={{ color: theme.textSecondary, fontSize: 11.5, fontWeight: '600' }}
+            >
+              {providerLabel}
             </Text>
           </View>
         </View>
         <ContextRing usage={context} theme={theme} />
-        <IconButton icon="trash-outline" label="Clear chat" onPress={clearChat} disabled={generating || messages.length === 0} />
-        <IconButton icon="settings-outline" label="Chat settings" onPress={openSettings} />
+        <IconButton
+          icon="trash-outline"
+          label="Clear chat"
+          onPress={clearChat}
+          disabled={generating || messages.length === 0}
+        />
+        <IconButton
+          icon="settings-outline"
+          label="Chat settings"
+          onPress={openSettings}
+        />
       </View>
-      {banner}
-      {messages.length === 0 ? (
-        <View style={styles.empty}>
-          <View style={[styles.emptyAvatar, { backgroundColor: theme.buttonPrimary }]}>
-            <Ionicons name="sparkles" size={30} color="#FFF" />
+
+      {/* Subject & Module Context Selector Bar */}
+      <View
+        style={[
+          styles.contextBar,
+          { backgroundColor: theme.card, borderBottomColor: theme.border },
+        ]}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.contextChipsRow}
+        >
+          {ACADEMIC_SUBJECTS.map((s) => {
+            const active = s.id === currentSubject.id;
+            return (
+              <SmoothPressable
+                key={s.id}
+                onPress={() => {
+                  setSelectedSubjectId(s.id);
+                  setSelectedModuleTitle(s.modules[0]?.title ?? '');
+                }}
+                style={[
+                  styles.ctxChip,
+                  {
+                    backgroundColor: active ? s.color : theme.surface,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.ctxChipText,
+                    { color: active ? '#FFFFFF' : theme.navy },
+                  ]}
+                >
+                  {s.shortName}
+                </Text>
+              </SmoothPressable>
+            );
+          })}
+          <View
+            style={[
+              styles.moduleCtxBadge,
+              { backgroundColor: `${currentSubject.color}18` },
+            ]}
+          >
+            <Ionicons name="book" size={12} color={currentSubject.color} />
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.moduleCtxText,
+                { color: currentSubject.color },
+              ]}
+            >
+              {selectedModuleTitle}
+            </Text>
           </View>
-          <Text style={[styles.emptyTitle, { color: theme.text }]}>
-            Hi {settings.nickname || 'there'}, how can I help?
+        </ScrollView>
+      </View>
+
+      {problem && (
+        <Banner
+          text={`${problem} (Using built-in OrasOras Academic Tutor offline — or tap to add Gemini API key)`}
+          actionLabel="AI Settings"
+          onPress={openSettings}
+        />
+      )}
+
+      {messages.length === 0 ? (
+        <ScrollView
+          contentContainerStyle={styles.emptyScroll}
+          showsVerticalScrollIndicator={false}
+        >
+          <DepthCard
+            variant="color"
+            gradientColors={[activeTheme.primary, activeTheme.secondary]}
+            style={styles.emptyHeroCard}
+          >
+            <View style={styles.aiHeroRow}>
+              <Icon3D
+                name="sparkles"
+                bg="rgba(255,255,255,0.22)"
+                boxSize={48}
+                size={24}
+              />
+              <View style={styles.flex}>
+                <Text style={styles.emptyTitle}>
+                  Hi {account.name.split(' ')[0]}, I’m OrasOras AI
+                </Text>
+                <Text style={styles.emptySub}>
+                  Context locked to {currentSubject.shortName}:{' '}
+                  {selectedModuleTitle}
+                </Text>
+              </View>
+            </View>
+          </DepthCard>
+
+          <Text style={[styles.promptsHeading, { color: theme.textMuted }]}>
+            SUGGESTED ACADEMIC PROMPTS
           </Text>
-          <Text style={[styles.emptySub, { color: theme.textSecondary }]}>
-            Ask anything. Your chat is saved on this device.
-          </Text>
+
           <View style={styles.chips}>
             {SUGGESTIONS.map((s) => (
               <SmoothPressable
                 key={s.label}
-                disabled={problem !== null}
-                onPress={() => setInput(s.prompt)}
+                onPress={() => void sendPromptText(s.prompt)}
                 style={[
                   styles.chip,
-                  { backgroundColor: theme.buttonSecondary, borderColor: theme.buttonSecondary },
-                  problem !== null && styles.chipDisabled,
+                  {
+                    backgroundColor: theme.card,
+                    borderColor: theme.border,
+                  },
                 ]}
               >
-                <Ionicons name={s.icon} size={18} color={theme.tint} />
-                <Text style={{ color: theme.text, fontSize: 14, fontWeight: '500' }}>
-                  {s.label}
+                <Ionicons
+                  name="sparkles"
+                  size={15}
+                  color={activeTheme.primary}
+                />
+                <Text
+                  style={{
+                    color: theme.navy,
+                    fontSize: 13,
+                    fontWeight: '700',
+                  }}
+                >
+                  {s.prompt}
                 </Text>
               </SmoothPressable>
             ))}
           </View>
-        </View>
+        </ScrollView>
       ) : (
         <FlatList
           inverted
@@ -449,20 +772,150 @@ export default function ChatScreen() {
           keyExtractor={(m) => m.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <MessageBubble
-              message={item}
-              pendingLabel={pendingLabel}
-              onRetry={item.role === 'assistant' ? retry : undefined}
-            />
+            <View>
+              <MessageBubble
+                message={item}
+                pendingLabel={pendingLabel}
+                onRetry={item.role === 'assistant' ? retry : undefined}
+              />
+
+              {/* Structured Answer Actions: Copy, Save to Library, Generate Quiz & Follow-ups */}
+              {item.role === 'assistant' &&
+                item.status === 'done' &&
+                item.content.length > 0 && (
+                  <View style={styles.assistantToolbarWrap}>
+                    <View style={styles.assistantActionRow}>
+                      <SmoothPressable
+                        onPress={() => void handleCopyMessage(item.content)}
+                        style={[
+                          styles.structuredBtn,
+                          {
+                            backgroundColor: theme.card,
+                            borderColor: theme.border,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="copy-outline"
+                          size={14}
+                          color={theme.navy}
+                        />
+                        <Text
+                          style={[
+                            styles.structuredBtnText,
+                            { color: theme.navy },
+                          ]}
+                        >
+                          Copy
+                        </Text>
+                      </SmoothPressable>
+
+                      <SmoothPressable
+                        onPress={() => void handleSaveToLibrary(item.content)}
+                        style={[
+                          styles.structuredBtn,
+                          {
+                            backgroundColor: theme.card,
+                            borderColor: theme.border,
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name="bookmark-outline"
+                          size={14}
+                          color={activeTheme.primary}
+                        />
+                        <Text
+                          style={[
+                            styles.structuredBtnText,
+                            { color: activeTheme.primary },
+                          ]}
+                        >
+                          Save to Library
+                        </Text>
+                      </SmoothPressable>
+
+                      <SmoothPressable
+                        onPress={() =>
+                          router.push({
+                            pathname: '/quiz',
+                            params: {
+                              subjectId: currentSubject.id,
+                            },
+                          } as unknown as Href)
+                        }
+                        style={[
+                          styles.structuredBtn,
+                          {
+                            backgroundColor: 'rgba(16,185,129,0.14)',
+                            borderColor: 'rgba(16,185,129,0.3)',
+                          },
+                        ]}
+                      >
+                        <Ionicons name="ribbon" size={14} color="#10B981" />
+                        <Text
+                          style={[
+                            styles.structuredBtnText,
+                            { color: '#10B981' },
+                          ]}
+                        >
+                          Generate Quiz
+                        </Text>
+                      </SmoothPressable>
+                    </View>
+
+                    {/* Follow-up Suggestion Chips */}
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.followUpRow}
+                    >
+                      {FOLLOW_UP_CHIPS.map((fChip) => (
+                        <SmoothPressable
+                          key={fChip}
+                          onPress={() => void sendPromptText(fChip)}
+                          style={[
+                            styles.followUpChip,
+                            { backgroundColor: theme.surface },
+                          ]}
+                        >
+                          <Ionicons
+                            name="return-down-forward"
+                            size={12}
+                            color={activeTheme.primary}
+                          />
+                          <Text
+                            style={[
+                              styles.followUpText,
+                              { color: theme.textSecondary },
+                            ]}
+                          >
+                            {fChip}
+                          </Text>
+                        </SmoothPressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+            </View>
           )}
         />
       )}
+
       <ChatInput
         value={input}
         onChange={setInput}
-        onSend={() => { void send().catch((error) => { setGenerating(false); showMessage('Unable to send message', error instanceof Error ? error.message : 'Please try again.'); }); }}
+        onSend={() => {
+          void sendPromptText(input).catch((error) => {
+            setGenerating(false);
+            showMessage(
+              'Unable to send message',
+              error instanceof Error ? error.message : 'Please try again.'
+            );
+          });
+        }}
         onStop={stop}
-        disabled={sendDisabled}
+        disabled={false}
         generating={generating}
         imageUri={pendingImage}
         onPickImage={provider ? attachImage : undefined}
@@ -486,46 +939,123 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 14,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  title: { fontSize: 18, fontWeight: '700' },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  empty: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
+  title: { fontSize: 16.5, fontWeight: '900', letterSpacing: -0.3 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  statusDot: { width: 7, height: 7, borderRadius: 3.5 },
+  contextBar: {
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  emptyAvatar: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  contextChipsRow: {
+    paddingHorizontal: 14,
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
+    gap: 6,
   },
-  emptyTitle: { fontSize: 20, fontWeight: '700', textAlign: 'center' },
-  emptySub: { fontSize: 14, marginTop: 6, textAlign: 'center' },
-  chips: {
+  ctxChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9,
+  },
+  ctxChipText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  moduleCtxBadge: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 9,
+  },
+  moduleCtxText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    maxWidth: 180,
+  },
+  emptyScroll: {
+    padding: 18,
+    gap: 14,
+  },
+  emptyHeroCard: {
+    padding: 16,
+  },
+  aiHeroRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  emptyTitle: {
+    fontSize: 17,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+  emptySub: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.9)',
+    marginTop: 2,
+  },
+  promptsHeading: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.7,
+    marginTop: 4,
+  },
+  chips: {
     gap: 8,
-    marginTop: 20,
   },
   chip: {
     minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 10,
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
-  chipDisabled: { opacity: 0.5 },
   list: { paddingVertical: 12 },
+  assistantToolbarWrap: {
+    paddingHorizontal: 16,
+    marginTop: -4,
+    marginBottom: 12,
+    gap: 8,
+  },
+  assistantActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  structuredBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  structuredBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
+  followUpRow: {
+    gap: 6,
+  },
+  followUpChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+  },
+  followUpText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
 });

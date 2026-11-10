@@ -97,24 +97,32 @@ export function isModelLoaded(): boolean {
 
 /** Read the on-disk state into `status`. Call once on app start. */
 export async function refreshModelStatus(): Promise<ModelStatus> {
+  if (Platform.OS === 'web') {
+    emit({ state: 'not_downloaded' });
+    return status;
+  }
   if (engine) {
     emit({ state: 'loaded' });
     return status;
   }
-  const info = await FileSystem.getInfoAsync(modelUri());
-  if (info.exists) {
-    emit({ state: 'downloaded', sizeBytes: info.size ?? 0 });
-  } else {
-    const tmp = await FileSystem.getInfoAsync(tmpUri());
-    const resume = await getModelResumeData();
-    if (tmp.exists || resume) {
-      emit({
-        state: 'paused',
-        progress: tmp.exists && tmp.size ? tmp.size / expectedSize() : 0,
-      });
+  try {
+    const info = await FileSystem.getInfoAsync(modelUri());
+    if (info.exists) {
+      emit({ state: 'downloaded', sizeBytes: info.size ?? 0 });
     } else {
-      emit({ state: 'not_downloaded' });
+      const tmp = await FileSystem.getInfoAsync(tmpUri());
+      const resume = await getModelResumeData();
+      if (tmp.exists || resume) {
+        emit({
+          state: 'paused',
+          progress: tmp.exists && tmp.size ? tmp.size / expectedSize() : 0,
+        });
+      } else {
+        emit({ state: 'not_downloaded' });
+      }
     }
+  } catch {
+    emit({ state: 'not_downloaded' });
   }
   return status;
 }

@@ -96,6 +96,7 @@ export default function SettingsScreen() {
         // Settings go back to defaults (onboarded = false), so the root
         // layout switches to the onboarding screen.
         await reset();
+        router.replace('/onboarding');
       }
     );
 
