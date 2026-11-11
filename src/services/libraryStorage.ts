@@ -7,11 +7,14 @@ import type {
 } from '@/data/orasorasData';
 
 const DB_NAME = 'orasoras_library_v1';
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 const STORE_FILES = 'files_metadata';
 const STORE_BLOBS = 'files_blobs';
 const STORE_FOLDERS = 'folders_metadata';
 const STORE_CUSTOM_SUBJECTS = 'custom_subjects';
+
+/** In-memory blob URL cache for ultra-fast instant preview and reliable playback */
+const memoryBlobMap = new Map<string, string>();
 
 export interface StorageUsageStats {
   totalBytes: number;
@@ -137,46 +140,116 @@ export async function saveLibraryFileBlob(
   fileItem: LibraryFileItem,
   blobOrFile?: Blob | File | string
 ): Promise<string | undefined> {
+  if (!blobOrFile) return undefined;
+
   if (Platform.OS === 'web') {
-    const db = await openIndexedDb();
-    if (db && blobOrFile && typeof blobOrFile !== 'string') {
-      return new Promise((resolve) => {
+    let resolvedBlob: Blob | null = null;
+    if (blobOrFile instanceof Blob) {
+      resolvedBlob = blobOrFile;
+    } else if (typeof blobOrFile === 'string') {
+      if (
+        blobOrFile.startsWith('blob:') ||
+        blobOrFile.startsWith('data:') ||
+        blobOrFile.startsWith('http')
+      ) {
         try {
-          const tx = db.transaction(STORE_BLOBS, 'readwrite');
-          const store = tx.objectStore(STORE_BLOBS);
-          store.put({
-            id: fileItem.id,
-            blob: blobOrFile,
-            fileName: fileItem.originalFileName,
-            mimeType: fileItem.mimeType,
-            updatedAt: Date.now(),
-          });
-          tx.oncomplete = () => {
-            db.close();
-            resolve(`indexeddb://${fileItem.id}`);
-          };
-          tx.onerror = () => {
-            db.close();
-            resolve(undefined);
-          };
-        } catch {
-          db.close();
-          resolve(undefined);
+          const res = await fetch(blobOrFile);
+          resolvedBlob = await res.blob();
+        } catch (e) {
+          console.warn('Could not fetch blob from string URI:', e);
         }
-      });
+      }
     }
-    return undefined;
+
+    if (resolvedBlob) {
+      try {
+        const memUrl = URL.createObjectURL(resolvedBlob);
+        memoryBlobMap.set(fileItem.id, memUrl);
+      } catch {
+        // ignore in environments without URL.createObjectURL
+      }
+
+      const db = await openIndexedDb();
+      if (db) {
+        return new Promise((resolve) => {
+          try {
+            const tx = db.transaction(STORE_BLOBS, 'readwrite');
+            const store = tx.objectStore(STORE_BLOBS);
+            store.put({
+              id: fileItem.id,
+              blob: resolvedBlob,
+              fileName: fileItem.originalFileName,
+              mimeType: fileItem.mimeType,
+              updatedAt: Date.now(),
+            });
+            tx.oncomplete = () => {
+              db.close();
+              resolve(`indexeddb://${fileItem.id}`);
+            };
+            tx.onerror = () => {
+              db.close();
+              resolve(typeof blobOrFile === 'string' ? blobOrFile : undefined);
+            };
+          } catch {
+            db.close();
+            resolve(typeof blobOrFile === 'string' ? blobOrFile : undefined);
+          }
+        });
+      }
+    }
+    return typeof blobOrFile === 'string' ? blobOrFile : undefined;
   }
 
-  // Native: copy to library directory
-  if (typeof blobOrFile === 'string' && blobOrFile.startsWith('file://')) {
-    const targetDir = await ensureNativeDir(`${fileItem.accountId}/`);
-    const targetUri = `${targetDir}${fileItem.id}.${fileItem.fileExtension}`;
-    await FileSystem.copyAsync({ from: blobOrFile, to: targetUri }).catch(() => {});
-    return targetUri;
+  // Native: copy to library directory (supports file://, content://, /, ph://)
+  if (
+    typeof blobOrFile === 'string' &&
+    (blobOrFile.startsWith('file://') ||
+      blobOrFile.startsWith('content://') ||
+      blobOrFile.startsWith('/') ||
+      blobOrFile.startsWith('ph://'))
+  ) {
+    try {
+      const ext = fileItem.fileExtension ? `.${fileItem.fileExtension}` : '';
+      const targetDir = await ensureNativeDir(`${fileItem.accountId}/`);
+      const targetUri = `${targetDir}${fileItem.id}${ext}`;
+      await FileSystem.copyAsync({ from: blobOrFile, to: targetUri });
+      return targetUri;
+    } catch (e) {
+      console.warn('Native copyAsync failed, using original source URI:', e);
+      return blobOrFile;
+    }
   }
 
   return undefined;
+}
+
+// ── Delete File Blob (IndexedDB on Web, FileSystem on Native) ───────────────
+export async function deleteLibraryFileBlob(fileItem: LibraryFileItem): Promise<void> {
+  memoryBlobMap.delete(fileItem.id);
+
+  if (Platform.OS === 'web') {
+    const db = await openIndexedDb();
+    if (db) {
+      try {
+        const tx = db.transaction(STORE_BLOBS, 'readwrite');
+        const store = tx.objectStore(STORE_BLOBS);
+        store.delete(fileItem.id);
+        tx.oncomplete = () => db.close();
+        tx.onerror = () => db.close();
+      } catch {
+        db.close();
+      }
+    }
+    return;
+  }
+
+  if (fileItem.localUri) {
+    try {
+      await FileSystem.deleteAsync(fileItem.localUri, { idempotent: true });
+    } catch {
+      // ignore deletion errors
+    }
+  }
 }
 
 // ── Retrieve File Blob URL for In-App Reader / Download ──────────────────────
@@ -184,6 +257,10 @@ export async function getFileBlobUrl(fileItem: LibraryFileItem): Promise<string 
   if (fileItem.dataUrl) return fileItem.dataUrl;
 
   if (Platform.OS === 'web') {
+    if (memoryBlobMap.has(fileItem.id)) {
+      return memoryBlobMap.get(fileItem.id)!;
+    }
+
     const db = await openIndexedDb();
     if (db) {
       return new Promise((resolve) => {
@@ -196,24 +273,37 @@ export async function getFileBlobUrl(fileItem: LibraryFileItem): Promise<string 
             db.close();
             if (result?.blob) {
               const url = URL.createObjectURL(result.blob);
+              memoryBlobMap.set(fileItem.id, url);
               resolve(url);
             } else {
-              resolve(null);
+              const safeFallback =
+                fileItem.localUri && !fileItem.localUri.startsWith('indexeddb://')
+                  ? fileItem.localUri
+                  : null;
+              resolve(safeFallback);
             }
           };
           req.onerror = () => {
             db.close();
-            resolve(null);
+            const safeFallback =
+              fileItem.localUri && !fileItem.localUri.startsWith('indexeddb://')
+                ? fileItem.localUri
+                : null;
+            resolve(safeFallback);
           };
         } catch {
           db.close();
-          resolve(null);
+          const safeFallback =
+            fileItem.localUri && !fileItem.localUri.startsWith('indexeddb://')
+              ? fileItem.localUri
+              : null;
+          resolve(safeFallback);
         }
       });
     }
   }
 
-  if (fileItem.localUri) {
+  if (fileItem.localUri && !fileItem.localUri.startsWith('indexeddb://')) {
     return fileItem.localUri;
   }
 

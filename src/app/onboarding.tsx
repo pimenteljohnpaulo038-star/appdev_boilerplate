@@ -21,7 +21,7 @@ import Svg, {
   Rect,
   Stop,
 } from 'react-native-svg';
-import { AnimeAvatar } from '@/components/AnimeAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { DepthCard, Icon3D } from '@/components/DepthUI';
 import { SmoothPressable } from '@/components/SmoothPressable';
 import { useOras } from '@/context/OrasContext';
@@ -379,8 +379,8 @@ export default function OnboardingScreen() {
           {step === 2 && (
             <View style={styles.stepBlock}>
               <View style={styles.avatarPreviewHeader}>
-                <AnimeAvatar
-                  presetId={selectedAvatarId}
+                <UserAvatar
+                  avatarId={selectedAvatarId}
                   size={96}
                   bgColors={[chosenTheme.primary, chosenTheme.secondary]}
                 />
@@ -416,7 +416,7 @@ export default function OnboardingScreen() {
                         },
                       ]}
                     >
-                      <AnimeAvatar presetId={av.id} size={54} />
+                      <UserAvatar avatarId={av.id} size={54} />
                       <Text style={[styles.avatarChoiceName, { color: theme.navy }]}>
                         {av.name}
                       </Text>
@@ -490,8 +490,8 @@ export default function OnboardingScreen() {
           {step === 3 && (
             <View style={styles.stepBlock}>
               <View style={styles.readySummaryHero}>
-                <AnimeAvatar
-                  presetId={selectedAvatarId}
+                <UserAvatar
+                  avatarId={selectedAvatarId}
                   size={84}
                   bgColors={[chosenTheme.primary, chosenTheme.secondary]}
                 />

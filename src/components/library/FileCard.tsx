@@ -58,74 +58,95 @@ export function FileCard({
         },
       ]}
     >
+      {/* Top Meta Row: left side opens file, right side has sibling action buttons */}
+      <View style={styles.topRow}>
+        <SmoothPressable
+          onPress={() => onOpen(file)}
+          style={styles.iconAndBadge}
+          accessibilityLabel={`Open ${file.title}`}
+          accessibilityRole="button"
+        >
+          <View style={[styles.typeIconBox, { backgroundColor: `${typeColor}18` }]}>
+            <Ionicons
+              name={typeIcon as React.ComponentProps<typeof Ionicons>['name']}
+              size={22}
+              color={typeColor}
+            />
+          </View>
+
+          <View style={styles.typePills}>
+            <View style={[styles.typePill, { backgroundColor: `${typeColor}20` }]}>
+              <Text style={[styles.typePillText, { color: typeColor }]}>
+                {file.fileType.toUpperCase()}
+              </Text>
+            </View>
+
+            {file.isOfflineAvailable && (
+              <View style={[styles.statusPill, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                <Ionicons name="cloud-done" size={11} color="#10B981" />
+                <Text style={[styles.statusPillText, { color: '#10B981' }]}>
+                  Offline Ready
+                </Text>
+              </View>
+            )}
+
+            {file.isPinned && (
+              <View style={[styles.statusPill, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+                <Ionicons name="pin" size={11} color="#F59E0B" />
+                <Text style={[styles.statusPillText, { color: '#F59E0B' }]}>
+                  Pinned
+                </Text>
+              </View>
+            )}
+          </View>
+        </SmoothPressable>
+
+        {/* Sibling Quick Pin, Favorite & Options Actions — NOT nested inside another button */}
+        <View style={styles.topActions}>
+          <SmoothPressable
+            onPress={() => onTogglePinned(file.id)}
+            style={styles.actionIconBtn}
+            accessibilityLabel={file.isPinned ? 'Unpin file' : 'Pin file to top'}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={file.isPinned ? 'pin' : 'pin-outline'}
+              size={17}
+              color={file.isPinned ? '#F59E0B' : theme.textMuted}
+            />
+          </SmoothPressable>
+
+          <SmoothPressable
+            onPress={() => onToggleFavorite(file.id)}
+            style={styles.actionIconBtn}
+            accessibilityLabel={file.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+            accessibilityRole="button"
+          >
+            <Ionicons
+              name={file.isFavorite ? 'heart' : 'heart-outline'}
+              size={18}
+              color={file.isFavorite ? '#EC4899' : theme.textMuted}
+            />
+          </SmoothPressable>
+
+          <SmoothPressable
+            onPress={() => onOptionsPress(file)}
+            style={styles.actionIconBtn}
+            accessibilityLabel="More options"
+            accessibilityRole="button"
+          >
+            <Ionicons name="ellipsis-vertical" size={17} color={theme.navy} />
+          </SmoothPressable>
+        </View>
+      </View>
+
+      {/* Main File Body Pressable */}
       <SmoothPressable
         onPress={() => onOpen(file)}
         style={styles.cardMainPressable}
         accessibilityLabel={`Open ${file.title}`}
         accessibilityRole="button"
       >
-        {/* Top Meta Row */}
-        <View style={styles.topRow}>
-          <View style={styles.iconAndBadge}>
-            <View style={[styles.typeIconBox, { backgroundColor: `${typeColor}18` }]}>
-              <Ionicons
-                name={typeIcon as React.ComponentProps<typeof Ionicons>['name']}
-                size={22}
-                color={typeColor}
-              />
-            </View>
-
-            <View style={styles.typePills}>
-              <View style={[styles.typePill, { backgroundColor: `${typeColor}20` }]}>
-                <Text style={[styles.typePillText, { color: typeColor }]}>
-                  {file.fileType.toUpperCase()}
-                </Text>
-              </View>
-
-              {file.isOfflineAvailable && (
-                <View style={[styles.statusPill, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-                  <Ionicons name="cloud-done" size={11} color="#10B981" />
-                  <Text style={[styles.statusPillText, { color: '#10B981' }]}>
-                    Offline Ready
-                  </Text>
-                </View>
-              )}
-
-              {file.isPinned && (
-                <View style={[styles.statusPill, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
-                  <Ionicons name="pin" size={11} color="#F59E0B" />
-                  <Text style={[styles.statusPillText, { color: '#F59E0B' }]}>
-                    Pinned
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
-
-          {/* Quick Favorite & Options Button */}
-          <View style={styles.topActions}>
-            <SmoothPressable
-              onPress={() => onToggleFavorite(file.id)}
-              style={styles.actionIconBtn}
-              accessibilityLabel={file.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-            >
-              <Ionicons
-                name={file.isFavorite ? 'heart' : 'heart-outline'}
-                size={18}
-                color={file.isFavorite ? '#EC4899' : theme.textMuted}
-              />
-            </SmoothPressable>
-
-            <SmoothPressable
-              onPress={() => onOptionsPress(file)}
-              style={styles.actionIconBtn}
-              accessibilityLabel="More options"
-            >
-              <Ionicons name="ellipsis-vertical" size={17} color={theme.navy} />
-            </SmoothPressable>
-          </View>
-        </View>
-
         {/* Title & Original File Name */}
         <View style={styles.titleWrap}>
           <Text numberOfLines={2} style={[styles.fileTitle, { color: theme.navy }]}>
@@ -244,6 +265,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   iconAndBadge: {
     flexDirection: 'row',

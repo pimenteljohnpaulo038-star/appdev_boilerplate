@@ -4,8 +4,9 @@ import {
   useRouter,
   type Href,
 } from 'expo-router';
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BackHandler,
   ScrollView,
   StyleSheet,
   Text,
@@ -73,6 +74,28 @@ export default function QuizScreen() {
 
   // Stage 3: Final Result record
   const [finalResult, setFinalResult] = useState<QuizResultRecord | null>(null);
+
+  // Hardware back button support for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (stage === 'review') {
+        setStage('results');
+        return true;
+      }
+      if (stage === 'active') {
+        setStage('setup');
+        return true;
+      }
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+      router.replace('/(tabs)' as Href);
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [stage, router]);
 
   const buildSequencedQuestions = (count: number): QuizQuestion[] => {
     // Gather questions from selected module (and supplement from subject if count > module questions)

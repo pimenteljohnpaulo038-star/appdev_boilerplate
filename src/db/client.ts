@@ -223,19 +223,9 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
     initPromise = (async () => {
       try {
         if (Platform.OS === 'web') {
-          // On Web, test if openDatabaseAsync works or fall back safely
-          try {
-            const database = await SQLite.openDatabaseAsync('chat.db');
-            await database.execAsync('PRAGMA foreign_keys = ON');
-            await migrate(database);
-            db = database;
-            return database;
-          } catch (webErr) {
-            console.warn('Web SQLite native worker unavailable, using local storage fallback:', webErr);
-            const fallbackDb = createWebFallbackDatabase();
-            db = fallbackDb;
-            return fallbackDb;
-          }
+          const fallbackDb = createWebFallbackDatabase();
+          db = fallbackDb;
+          return fallbackDb;
         }
         const database = await SQLite.openDatabaseAsync('chat.db');
         await database.execAsync('PRAGMA foreign_keys = ON');

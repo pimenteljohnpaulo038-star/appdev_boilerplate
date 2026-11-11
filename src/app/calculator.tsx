@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  BackHandler,
   Platform,
   ScrollView,
   StyleSheet,
@@ -507,6 +508,20 @@ export default function StudyToolsScreen() {
     if (todoFilter === 'completed') return t.done;
     return true;
   });
+
+  // Hardware back button support for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+      router.replace('/(tabs)' as Href);
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [router]);
 
   return (
     <View style={[styles.container, { backgroundColor: theme.background }]}>

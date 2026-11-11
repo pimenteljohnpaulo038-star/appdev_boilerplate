@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useMemo, useState } from 'react';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
+  BackHandler,
   Modal,
   ScrollView,
   StyleSheet,
@@ -77,6 +78,24 @@ export default function RequirementsScreen() {
     'Draft outline\nComplete practice problems\nFinal review'
   );
   const [reminderEnabled, setReminderEnabled] = useState(true);
+
+  // Hardware back button support for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (modalVisible) {
+        setModalVisible(false);
+        return true;
+      }
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+      router.replace('/(tabs)' as Href);
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [modalVisible, router]);
 
   const todayStr = new Date().toISOString().split('T')[0];
 

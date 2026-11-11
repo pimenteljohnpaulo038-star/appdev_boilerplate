@@ -7,7 +7,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { AnimeAvatar } from '@/components/AnimeAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { DepthCard, Icon3D } from '@/components/DepthUI';
 import { SmoothPressable } from '@/components/SmoothPressable';
 import { useOras } from '@/context/OrasContext';
@@ -98,12 +98,7 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/profile' as Href)}
             style={styles.profileGreetRow}
           >
-            <AnimeAvatar
-              config={account.useCustomAvatar ? account.customAvatar : undefined}
-              presetId={account.presetAvatarId}
-              size={52}
-              bgColors={[activeTheme.primary, activeTheme.secondary]}
-            />
+            <UserAvatar size={52} />
             <View style={styles.greetCol}>
               <View style={styles.dateBadgeRow}>
                 <Text style={[styles.dateText, { color: theme.textMuted }]}>
@@ -147,6 +142,22 @@ export default function HomeScreen() {
           </SmoothPressable>
 
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <SmoothPressable
+              onPress={() => router.push('/settings' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Open Settings & Account"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[
+                styles.langToggleBtn,
+                {
+                  backgroundColor: theme.surface,
+                  borderColor: `${activeTheme.primary}40`,
+                },
+              ]}
+            >
+              <Ionicons name="settings-sharp" size={13} color={activeTheme.primary} />
+            </SmoothPressable>
+
             <SmoothPressable
               onPress={() => setControlCenterVisible(true)}
               accessibilityLabel="Open Control Center"

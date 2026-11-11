@@ -5,10 +5,12 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import {
   ACADEMIC_SUBJECTS,
+  ANIME_PRESET_AVATARS,
   COLOR_THEMES,
   STUDY_MODES,
   createDefaultAccount,
@@ -31,7 +33,7 @@ import {
 } from '@/data/orasorasData';
 import { useSettings } from '@/settings/SettingsContext';
 import { showMessage } from '@/utils/confirm';
-import { saveLibraryFileBlob } from '@/services/libraryStorage';
+import { deleteLibraryFileBlob, saveLibraryFileBlob } from '@/services/libraryStorage';
 import {
   type AppLanguage,
   TRANSLATIONS,
@@ -386,7 +388,13 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  const storeRef = useRef(store);
+  useEffect(() => {
+    storeRef.current = store;
+  }, [store]);
+
   const persistStore = useCallback(async (next: OrasStoreState) => {
+    storeRef.current = next;
     setStore(next);
     try {
       await Storage.setItemAsync(ORAS_STORAGE_KEY, JSON.stringify(next));
@@ -421,12 +429,15 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
 
   const mutateActiveAccount = useCallback(
     async (updater: (acc: StudentAccount) => StudentAccount) => {
-      const nextAccounts = store.accounts.map((acc) =>
-        acc.id === account.id ? updater(acc) : acc
+      const current = storeRef.current;
+      const targetId = current.activeAccountId;
+      const nextAccounts = current.accounts.map((acc) =>
+        acc.id === targetId ? updater(acc) : acc
       );
-      await persistStore({ ...store, accounts: nextAccounts });
+      const nextStore: OrasStoreState = { ...current, accounts: nextAccounts };
+      await persistStore(nextStore);
     },
-    [store, account.id, persistStore]
+    [persistStore]
   );
 
   const switchAccount = useCallback(
@@ -507,10 +518,13 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
 
   const selectPresetAvatar = useCallback(
     async (presetId: number) => {
+      const preset =
+        ANIME_PRESET_AVATARS[presetId] ?? ANIME_PRESET_AVATARS[0];
       await mutateActiveAccount((acc) => ({
         ...acc,
         presetAvatarId: presetId,
         useCustomAvatar: false,
+        customAvatar: { ...preset.config },
       }));
     },
     [mutateActiveAccount]
@@ -1080,13 +1094,17 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
 
   const deleteLibraryFile = useCallback(
     async (fileId: string) => {
+      const target = account.uploadedFiles?.find((f) => f.id === fileId);
+      if (target) {
+        void deleteLibraryFileBlob(target);
+      }
       await mutateActiveAccount((acc) => ({
         ...acc,
         uploadedFiles: (acc.uploadedFiles || []).filter((f) => f.id !== fileId),
         recentFileIds: (acc.recentFileIds || []).filter((id) => id !== fileId),
       }));
     },
-    [mutateActiveAccount]
+    [account.uploadedFiles, mutateActiveAccount]
   );
 
   const toggleFileFavorite = useCallback(

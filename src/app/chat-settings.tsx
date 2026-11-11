@@ -1,7 +1,8 @@
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
+  BackHandler,
   Linking,
   Keyboard,
   ScrollView,
@@ -93,11 +94,29 @@ export default function ChatSettingsScreen() {
     } finally { setSavingPrompt(false); }
   };
 
+  // Hardware back button support for Android
+  useEffect(() => {
+    const onBackPress = () => {
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/chat' as Href);
+      }
+      return true;
+    };
+    const sub = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => sub.remove();
+  }, [router]);
+
   const confirmClear = () => {
     confirmAction('Clear chat?', 'All messages will be deleted.', 'Clear', async () => {
       await clearAllConversations();
       await releaseLocalConversation('main');
-      router.back();
+      if (router.canGoBack()) {
+        router.back();
+      } else {
+        router.replace('/(tabs)/chat' as Href);
+      }
     });
   };
 

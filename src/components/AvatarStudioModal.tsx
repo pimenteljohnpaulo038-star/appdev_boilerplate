@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import {
   ACCESSORIES,
-  AnimeAvatar,
   FACE_SHAPES,
   HAIRSTYLES,
   HAIR_COLORS,
@@ -17,6 +16,7 @@ import {
   OUTFIT_COLORS,
   SKIN_TONES,
 } from '@/components/AnimeAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { SmoothPressable } from '@/components/SmoothPressable';
 import { useOras } from '@/context/OrasContext';
 import type { CustomAvatarConfig } from '@/data/orasorasData';
@@ -170,10 +170,9 @@ export function AvatarStudioModal({
               { backgroundColor: theme.surface },
             ]}
           >
-            <AnimeAvatar
+            <UserAvatar
               config={draft}
               size={146}
-              bgColors={[activeTheme.primary, activeTheme.secondary]}
             />
             <View style={styles.previewBadgesRow}>
               <View
@@ -255,10 +254,9 @@ export function AvatarStudioModal({
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
                       config={previewCfg}
                       size={64}
-                      bgColors={[activeTheme.primary, activeTheme.secondary]}
                     />
                     <Text
                       style={[styles.optionThumbTitle, { color: theme.navy }]}
@@ -289,10 +287,9 @@ export function AvatarStudioModal({
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
                       config={previewCfg}
                       size={56}
-                      bgColors={[activeTheme.primary, activeTheme.secondary]}
                     />
                     <Text
                       style={[styles.optionThumbTitle, { color: theme.navy }]}
@@ -357,10 +354,9 @@ export function AvatarStudioModal({
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
                       config={previewCfg}
                       size={56}
-                      bgColors={[activeTheme.primary, activeTheme.secondary]}
                     />
                     <Text
                       style={[styles.optionThumbTitle, { color: theme.navy }]}
@@ -425,10 +421,9 @@ export function AvatarStudioModal({
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
                       config={previewCfg}
                       size={56}
-                      bgColors={[activeTheme.primary, activeTheme.secondary]}
                     />
                     <Text
                       style={[styles.optionThumbTitle, { color: theme.navy }]}
@@ -494,10 +489,9 @@ export function AvatarStudioModal({
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
                       config={previewCfg}
                       size={56}
-                      bgColors={[activeTheme.primary, activeTheme.secondary]}
                     />
                     <Text
                       style={[styles.optionThumbTitle, { color: theme.navy }]}

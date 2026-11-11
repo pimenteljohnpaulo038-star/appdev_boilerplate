@@ -125,6 +125,7 @@ export default function LibraryScreen() {
   const [isStorageOpen, setIsStorageOpen] = useState(false);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [isCreateSubjectOpen, setIsCreateSubjectOpen] = useState(false);
+  const [justUploadedFileId, setJustUploadedFileId] = useState<string | null>(null);
 
   // File action & details modals
   const [actionFile, setActionFile] = useState<LibraryFileItem | null>(null);
@@ -134,8 +135,23 @@ export default function LibraryScreen() {
 
   // Active Subject details
   const activeSubject = useMemo(() => {
+    if (selectedSubjectId === 'all') {
+      return {
+        id: 'all',
+        name: 'All Academic Subjects',
+        shortName: 'All Subjects',
+        gradeLevels: ['Junior High School', 'Senior High School', 'College'] as StudentLevel[],
+        color: activeTheme.primary,
+        secondaryColor: activeTheme.secondary,
+        lightBg: `${activeTheme.primary}18`,
+        icon: 'albums',
+        instructor: 'All Courses & Modules',
+        room: 'Offline Academic Library',
+        modules: [],
+      };
+    }
     return allSubjects.find((s) => s.id === selectedSubjectId) || allSubjects[0];
-  }, [allSubjects, selectedSubjectId]);
+  }, [allSubjects, selectedSubjectId, activeTheme]);
 
   const subjectColor = activeSubject?.color || activeTheme.primary;
 
@@ -154,12 +170,21 @@ export default function LibraryScreen() {
     for (const f of uploadedFiles) {
       counts.set(f.subjectId, (counts.get(f.subjectId) || 0) + 1);
     }
+    counts.set('all', uploadedFiles.length);
     return counts;
   }, [uploadedFiles]);
 
   // Subject folders list (including modules + custom folders)
   const subjectFolders = useMemo(() => {
     const list: { id: string; name: string; count: number }[] = [];
+
+    if (selectedSubjectId === 'all') {
+      for (const cf of customFolders) {
+        const count = uploadedFiles.filter((f) => f.folderId === cf.id).length;
+        list.push({ id: cf.id, name: cf.name, count });
+      }
+      return list;
+    }
 
     // Modules from standard subject
     if (activeSubject && 'modules' in activeSubject && Array.isArray(activeSubject.modules)) {
@@ -189,7 +214,7 @@ export default function LibraryScreen() {
 
     return uploadedFiles
       .filter((file) => {
-        // 1. Strict Subject Separation: Must belong to selected subject
+        // 1. Subject Separation: Must belong to selected subject (unless 'all')
         if (selectedSubjectId !== 'all' && file.subjectId !== selectedSubjectId) {
           return false;
         }
@@ -244,10 +269,10 @@ export default function LibraryScreen() {
     account.recentFileIds,
   ]);
 
-  // Storage total used in active subject
+  // Storage total used in active subject (or all)
   const subjectStorageBytes = useMemo(() => {
     return uploadedFiles
-      .filter((f) => f.subjectId === selectedSubjectId)
+      .filter((f) => selectedSubjectId === 'all' || f.subjectId === selectedSubjectId)
       .reduce((acc, f) => acc + (f.fileSize || 0), 0);
   }, [uploadedFiles, selectedSubjectId]);
 
@@ -420,6 +445,53 @@ export default function LibraryScreen() {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.subjectPillsRow}
               >
+                <SmoothPressable
+                  key="all-subjects"
+                  onPress={() => {
+                    setSelectedSubjectId('all');
+                    setSelectedFolderId('all');
+                  }}
+                  style={[
+                    styles.subjectPillCard,
+                    {
+                      backgroundColor: selectedSubjectId === 'all' ? activeTheme.primary : theme.card,
+                      borderColor: selectedSubjectId === 'all' ? activeTheme.primary : theme.border,
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="albums"
+                    size={15}
+                    color={selectedSubjectId === 'all' ? '#FFFFFF' : activeTheme.primary}
+                  />
+                  <Text
+                    style={[
+                      styles.subjectPillName,
+                      { color: selectedSubjectId === 'all' ? '#FFFFFF' : theme.navy },
+                    ]}
+                  >
+                    All Subjects
+                  </Text>
+                  <View
+                    style={[
+                      styles.subjectPillBadge,
+                      {
+                        backgroundColor:
+                          selectedSubjectId === 'all' ? 'rgba(255,255,255,0.25)' : theme.surface,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.subjectPillBadgeBadgeText,
+                        { color: selectedSubjectId === 'all' ? '#FFFFFF' : theme.textSecondary },
+                      ]}
+                    >
+                      {uploadedFiles.length}
+                    </Text>
+                  </View>
+                </SmoothPressable>
+
                 {displayedSubjects.map((s) => {
                   const active = s.id === selectedSubjectId;
                   const count = subjectFileCounts.get(s.id) || 0;
@@ -548,6 +620,36 @@ export default function LibraryScreen() {
                   </SmoothPressable>
                 </View>
               </DepthCard>
+            )}
+
+            {/* Upload Success Banner */}
+            {Boolean(justUploadedFileId) && (
+              <View
+                style={[
+                  styles.uploadSuccessBanner,
+                  { backgroundColor: `${subjectColor}14`, borderColor: subjectColor },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.successIconBox,
+                    { backgroundColor: `${subjectColor}20` },
+                  ]}
+                >
+                  <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.successBannerTitle, { color: theme.navy }]}>
+                    PDF Uploaded Successfully!
+                  </Text>
+                  <Text style={[styles.successBannerSub, { color: theme.textSecondary }]}>
+                    Added to Library and ready for offline reading.
+                  </Text>
+                </View>
+                <SmoothPressable onPress={() => setJustUploadedFileId(null)}>
+                  <Ionicons name="close" size={16} color={theme.textMuted} />
+                </SmoothPressable>
+              </View>
             )}
 
             {/* Search Bar */}
@@ -906,12 +1008,22 @@ export default function LibraryScreen() {
       {/* 1. Upload Bottom Sheet */}
       <UploadBottomSheet
         visible={isUploadOpen}
-        initialSubjectId={selectedSubjectId}
+        initialSubjectId={selectedSubjectId === 'all' ? allSubjects[0]?.id : selectedSubjectId}
         initialFolderId={selectedFolderId === 'all' ? 'root' : selectedFolderId}
         onClose={() => setIsUploadOpen(false)}
         onUploaded={(newFiles) => {
           if (newFiles.length > 0) {
-            handleOpenFile(newFiles[0]);
+            const first = newFiles[0];
+            // Immediately sync Library page so the new file is in full view!
+            if (selectedSubjectId !== 'all') {
+              setSelectedSubjectId(first.subjectId);
+            }
+            setSelectedFolderId('all');
+            setFileShelfTab('All Files');
+            setFormatFilter('all');
+            setSearch('');
+            setJustUploadedFileId(first.id);
+            setTimeout(() => setJustUploadedFileId(null), 5000);
           }
         }}
       />
@@ -1330,6 +1442,30 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 13,
     fontWeight: '700',
+  },
+  uploadSuccessBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 12,
+  },
+  successIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  successBannerTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  successBannerSub: {
+    fontSize: 11,
+    marginTop: 2,
   },
   searchBox: {
     flexDirection: 'row',

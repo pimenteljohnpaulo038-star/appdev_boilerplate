@@ -67,6 +67,7 @@ export function UploadBottomSheet({
     customFolders,
     uploadedFiles,
     uploadLibraryFile,
+    deleteLibraryFile,
     createCustomFolder,
     activeTheme,
   } = useOras();
@@ -78,6 +79,11 @@ export function UploadBottomSheet({
   const [selectedFolderId, setSelectedFolderId] = useState<string>(
     initialFolderId || 'root'
   );
+
+  const handleSelectSubject = useCallback((subjId: string) => {
+    setSelectedSubjectId(subjId);
+    setSelectedFolderId('root');
+  }, []);
 
   // Quick inline new folder input
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
@@ -150,17 +156,7 @@ export function UploadBottomSheet({
       setGeneralError(null);
       const res = await DocumentPicker.getDocumentAsync({
         multiple: true,
-        type: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'application/vnd.ms-powerpoint',
-          'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-          'application/vnd.ms-excel',
-          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-          'text/*',
-          'image/*',
-        ],
+        type: '*/*',
         copyToCacheDirectory: true,
       });
 
@@ -170,15 +166,15 @@ export function UploadBottomSheet({
 
       for (const asset of res.assets) {
         const name = asset.name || 'document';
-        const size = asset.size || 0;
-        const mime = asset.mimeType || 'application/octet-stream';
+        const rawFile = (asset as unknown as { file?: File }).file;
+        let size = asset.size ?? rawFile?.size ?? 0;
+        const mime = asset.mimeType || rawFile?.type || 'application/octet-stream';
         const type = detectFileType(name, mime);
         const ext = name.split('.').pop()?.toLowerCase() || '';
 
-        // Validation: file size
+        // If size is 0 or unpopulated from picker, give reasonable fallback
         if (size <= 0) {
-          setGeneralError(`"${name}" is empty or 0 bytes and cannot be uploaded.`);
-          continue;
+          size = 1024;
         }
         if (size > MAX_FILE_SIZE_BYTES) {
           setGeneralError(`"${name}" exceeds the 50 MB limit (${formatBytes(size)}).`);
@@ -198,7 +194,7 @@ export function UploadBottomSheet({
           fileType: type,
           mimeType: mime,
           fileExtension: ext,
-          rawFileOrUri: (asset as unknown as { file?: File }).file || asset.uri,
+          rawFileOrUri: rawFile || asset.uri,
           duplicateWarning: isDup,
           duplicateConflict: isDup ? 'rename' : undefined,
           uploadProgress: 0,
@@ -340,6 +336,18 @@ export function UploadBottomSheet({
       }
 
       try {
+        // If user chose to replace duplicate, remove previous file first
+        if (qItem.duplicateConflict === 'replace') {
+          const existing = uploadedFiles.find(
+            (f) =>
+              f.subjectId === selectedSubjectId &&
+              f.originalFileName.toLowerCase() === qItem.originalFileName.toLowerCase()
+          );
+          if (existing) {
+            await deleteLibraryFile(existing.id);
+          }
+        }
+
         // Build the metadata
         const fileData: Omit<LibraryFileItem, 'id' | 'accountId' | 'uploadedAt'> = {
           subjectId: selectedSubjectId,
@@ -390,16 +398,14 @@ export function UploadBottomSheet({
     setOverallProgress(100);
     setIsUploading(false);
 
-    // Call onUploaded callback with newly saved items
-    if (savedResults.length > 0 && onUploaded) {
-      onUploaded(savedResults);
-    }
-
-    // Auto-close after brief success visual
+    // Auto-close after brief success visual and notify listener
     setTimeout(() => {
       setFilesQueue([]);
       onClose();
-    }, 900);
+      if (savedResults.length > 0 && onUploaded) {
+        onUploaded(savedResults);
+      }
+    }, 600);
   };
 
   const handleWebDrop = React.useCallback(
@@ -413,12 +419,12 @@ export function UploadBottomSheet({
         const now = Date.now();
         for (const file of dropped) {
           const name = file.name;
-          const size = file.size;
+          const size = file.size || 1024;
           const mime = file.type || 'application/octet-stream';
           const type = detectFileType(name, mime);
           const ext = name.split('.').pop()?.toLowerCase() || '';
 
-          if (size <= 0 || size > MAX_FILE_SIZE_BYTES) continue;
+          if (size > MAX_FILE_SIZE_BYTES) continue;
           const isDup = checkDuplicate(name);
           const cleanTitle = name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ');
 
@@ -527,7 +533,7 @@ export function UploadBottomSheet({
                   return (
                     <SmoothPressable
                       key={subj.id}
-                      onPress={() => setSelectedSubjectId(subj.id)}
+                      onPress={() => handleSelectSubject(subj.id)}
                       style={[
                         styles.subjectPill,
                         {

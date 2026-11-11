@@ -59,8 +59,13 @@ export default function StudyHubScreen() {
     [account.studyMode]
   );
 
+  const focusMinutes =
+    account.preferences?.pomodoroFocusMin || activeModeObj.focusMin;
+  const breakMinutes =
+    account.preferences?.pomodoroShortBreakMin || activeModeObj.breakMin;
+
   const [isBreakPhase, setIsBreakPhase] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(activeModeObj.focusMin * 60);
+  const [secondsLeft, setSecondsLeft] = useState(focusMinutes * 60);
   const [timerRunning, setTimerRunning] = useState(false);
 
   // Focus Ambient Sound Simulator
@@ -100,13 +105,18 @@ export default function StudyHubScreen() {
               subjectId: currentSubject.id,
               subjectName: currentSubject.shortName,
               moduleId: currentModule.id,
-              durationMin: activeModeObj.focusMin,
+              durationMin: focusMinutes,
               mode: activeModeObj.id,
             });
             showMessage(
               'Focus Session Complete!',
-              `Logged ${activeModeObj.focusMin} mins on ${currentSubject.shortName}. Time for a ${activeModeObj.breakMin}-min break!`
+              `Logged ${focusMinutes} mins on ${currentSubject.shortName}. Time for a ${breakMinutes}-min break!`
             );
+            if (account.preferences?.pomodoroAutoTransition) {
+              setIsBreakPhase(true);
+              setTimerRunning(true);
+              return breakMinutes * 60;
+            }
           }
           return 0;
         }
@@ -118,13 +128,16 @@ export default function StudyHubScreen() {
     timerRunning,
     isBreakPhase,
     activeModeObj,
+    focusMinutes,
+    breakMinutes,
+    account.preferences?.pomodoroAutoTransition,
     currentSubject,
     currentModule,
     recordStudySession,
   ]);
 
   const totalPhaseSeconds =
-    (isBreakPhase ? activeModeObj.breakMin : activeModeObj.focusMin) * 60;
+    (isBreakPhase ? breakMinutes : focusMinutes) * 60;
   const timerProgress =
     1 - Math.max(0, Math.min(1, secondsLeft / Math.max(1, totalPhaseSeconds)));
 
@@ -205,12 +218,12 @@ export default function StudyHubScreen() {
       subjectId: currentSubject.id,
       subjectName: currentSubject.shortName,
       moduleId: currentModule.id,
-      durationMin: activeModeObj.focusMin,
+      durationMin: focusMinutes,
       mode: activeModeObj.id,
     });
     showMessage(
       'Session Logged',
-      `Added +${activeModeObj.focusMin} minutes of ${activeModeObj.id} study for ${currentSubject.shortName}.`
+      `Added +${focusMinutes} minutes of ${activeModeObj.id} study for ${currentSubject.shortName}.`
     );
   };
 
@@ -520,7 +533,7 @@ export default function StudyHubScreen() {
                 onPress={() => {
                   setTimerRunning(false);
                   setIsBreakPhase(false);
-                  setSecondsLeft(activeModeObj.focusMin * 60);
+                  setSecondsLeft(focusMinutes * 60);
                 }}
                 style={[
                   styles.phaseChip,
@@ -533,7 +546,7 @@ export default function StudyHubScreen() {
                     { color: !isBreakPhase ? '#FFFFFF' : theme.textSecondary },
                   ]}
                 >
-                  {t.focusTime} ({activeModeObj.focusMin}m)
+                  {t.focusTime} ({focusMinutes}m)
                 </Text>
               </SmoothPressable>
 
@@ -541,7 +554,7 @@ export default function StudyHubScreen() {
                 onPress={() => {
                   setTimerRunning(false);
                   setIsBreakPhase(true);
-                  setSecondsLeft(activeModeObj.breakMin * 60);
+                  setSecondsLeft(breakMinutes * 60);
                 }}
                 style={[
                   styles.phaseChip,
@@ -554,7 +567,7 @@ export default function StudyHubScreen() {
                     { color: isBreakPhase ? '#FFFFFF' : theme.textSecondary },
                   ]}
                 >
-                  {t.breakTime} ({activeModeObj.breakMin}m)
+                  {t.breakTime} ({breakMinutes}m)
                 </Text>
               </SmoothPressable>
             </View>
@@ -628,9 +641,7 @@ export default function StudyHubScreen() {
               onPress={() => {
                 setTimerRunning(false);
                 setSecondsLeft(
-                  (isBreakPhase
-                    ? activeModeObj.breakMin
-                    : activeModeObj.focusMin) * 60
+                  (isBreakPhase ? breakMinutes : focusMinutes) * 60
                 );
               }}
               style={[
@@ -649,7 +660,7 @@ export default function StudyHubScreen() {
               ]}
             >
               <Ionicons name="checkmark-done" size={17} color="#10B981" />
-              <Text style={styles.timerCompleteBtnText}>Log +{activeModeObj.focusMin}m</Text>
+              <Text style={styles.timerCompleteBtnText}>Log +{focusMinutes}m</Text>
             </SmoothPressable>
           </View>
 
@@ -780,69 +791,79 @@ export default function StudyHubScreen() {
 
             {activeCard && flashcards.length > 0 ? (
               <>
-                <SmoothPressable
-                  onPress={() => setCardFlipped((f) => !f)}
-                  accessibilityLabel="Flip flashcard"
+                <DepthCard
+                  variant={cardFlipped ? 'color' : 'card'}
+                  gradientColors={
+                    cardFlipped
+                      ? [currentSubject.color, currentSubject.secondaryColor]
+                      : undefined
+                  }
+                  style={styles.flashcardBox}
                 >
-                  <DepthCard
-                    variant={cardFlipped ? 'color' : 'card'}
-                    gradientColors={
-                      cardFlipped
-                        ? [currentSubject.color, currentSubject.secondaryColor]
-                        : undefined
-                    }
-                    style={styles.flashcardBox}
-                  >
-                    <View style={styles.rowBetween}>
-                      <View
+                  <View style={styles.rowBetween}>
+                    <SmoothPressable
+                      onPress={() => setCardFlipped((f) => !f)}
+                      style={[
+                        styles.fcBadge,
+                        {
+                          backgroundColor: cardFlipped
+                            ? 'rgba(255,255,255,0.2)'
+                            : `${currentSubject.color}18`,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Flip card"
+                    >
+                      <Text
                         style={[
-                          styles.fcBadge,
+                          styles.fcBadgeText,
                           {
-                            backgroundColor: cardFlipped
-                              ? 'rgba(255,255,255,0.2)'
-                              : `${currentSubject.color}18`,
+                            color: cardFlipped
+                              ? '#FFFFFF'
+                              : currentSubject.color,
                           },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.fcBadgeText,
-                            {
-                              color: cardFlipped
-                                ? '#FFFFFF'
-                                : currentSubject.color,
-                            },
-                          ]}
-                        >
-                          {cardFlipped ? 'ANSWER' : 'QUESTION'} · {activeCard.topic}
-                        </Text>
-                      </View>
+                        {cardFlipped ? 'ANSWER' : 'QUESTION'} · {activeCard.topic}
+                      </Text>
+                    </SmoothPressable>
 
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                        <SmoothPressable
-                          onPress={(e) => {
-                            e.stopPropagation();
-                            handleToggleBookmarkCard(activeCard.id);
-                          }}
-                        >
-                          <Ionicons
-                            name={
-                              bookmarkedCardIds.includes(activeCard.id)
-                                ? 'bookmark'
-                                : 'bookmark-outline'
-                            }
-                            size={19}
-                            color={cardFlipped ? '#FFFFFF' : activeTheme.primary}
-                          />
-                        </SmoothPressable>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <SmoothPressable
+                        onPress={() => handleToggleBookmarkCard(activeCard.id)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Bookmark card"
+                      >
+                        <Ionicons
+                          name={
+                            bookmarkedCardIds.includes(activeCard.id)
+                              ? 'bookmark'
+                              : 'bookmark-outline'
+                          }
+                          size={19}
+                          color={cardFlipped ? '#FFFFFF' : activeTheme.primary}
+                        />
+                      </SmoothPressable>
+                      <SmoothPressable
+                        onPress={() => setCardFlipped((f) => !f)}
+                        accessibilityRole="button"
+                        accessibilityLabel="Flip card"
+                      >
                         <Ionicons
                           name="sync"
                           size={17}
                           color={cardFlipped ? '#FFFFFF' : theme.textMuted}
                         />
-                      </View>
+                      </SmoothPressable>
                     </View>
+                  </View>
 
+                  <SmoothPressable
+                    onPress={() => setCardFlipped((f) => !f)}
+                    accessibilityLabel="Flip flashcard"
+                    accessibilityRole="button"
+                    style={{ flex: 1, justifyContent: 'center' }}
+                  >
                     <Text
                       style={[
                         styles.fcMainText,
@@ -851,40 +872,48 @@ export default function StudyHubScreen() {
                     >
                       {cardFlipped ? activeCard.back : activeCard.front}
                     </Text>
+                  </SmoothPressable>
 
-                    <View style={styles.fcNavRow}>
-                      <SmoothPressable
-                        onPress={() => {
-                          setCardFlipped(false);
-                          setCardIndex(
-                            (i) => (i - 1 + flashcards.length) % flashcards.length
-                          );
+                  <View style={styles.fcNavRow}>
+                    <SmoothPressable
+                      onPress={() => {
+                        setCardFlipped(false);
+                        setCardIndex(
+                          (i) => (i - 1 + flashcards.length) % flashcards.length
+                        );
+                      }}
+                      style={[
+                        styles.fcNavBtn,
+                        {
+                          backgroundColor: cardFlipped
+                            ? 'rgba(255,255,255,0.2)'
+                            : theme.surface,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Previous flashcard"
+                    >
+                      <Ionicons
+                        name="chevron-back"
+                        size={16}
+                        color={cardFlipped ? '#FFFFFF' : theme.navy}
+                      />
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: cardFlipped ? '#FFFFFF' : theme.navy,
                         }}
-                        style={[
-                          styles.fcNavBtn,
-                          {
-                            backgroundColor: cardFlipped
-                              ? 'rgba(255,255,255,0.2)'
-                              : theme.surface,
-                          },
-                        ]}
                       >
-                        <Ionicons
-                          name="chevron-back"
-                          size={16}
-                          color={cardFlipped ? '#FFFFFF' : theme.navy}
-                        />
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: '800',
-                            color: cardFlipped ? '#FFFFFF' : theme.navy,
-                          }}
-                        >
-                          Prev
-                        </Text>
-                      </SmoothPressable>
+                        Prev
+                      </Text>
+                    </SmoothPressable>
 
+                    <SmoothPressable
+                      onPress={() => setCardFlipped((f) => !f)}
+                      accessibilityRole="button"
+                      accessibilityLabel="Tap to flip card"
+                    >
                       <Text
                         style={{
                           fontSize: 11,
@@ -894,39 +923,41 @@ export default function StudyHubScreen() {
                       >
                         {t.tapToFlip}
                       </Text>
+                    </SmoothPressable>
 
-                      <SmoothPressable
-                        onPress={() => {
-                          setCardFlipped(false);
-                          setCardIndex((i) => (i + 1) % flashcards.length);
+                    <SmoothPressable
+                      onPress={() => {
+                        setCardFlipped(false);
+                        setCardIndex((i) => (i + 1) % flashcards.length);
+                      }}
+                      style={[
+                        styles.fcNavBtn,
+                        {
+                          backgroundColor: cardFlipped
+                            ? 'rgba(255,255,255,0.2)'
+                            : theme.surface,
+                        },
+                      ]}
+                      accessibilityRole="button"
+                      accessibilityLabel="Next flashcard"
+                    >
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          fontWeight: '800',
+                          color: cardFlipped ? '#FFFFFF' : theme.navy,
                         }}
-                        style={[
-                          styles.fcNavBtn,
-                          {
-                            backgroundColor: cardFlipped
-                              ? 'rgba(255,255,255,0.2)'
-                              : theme.surface,
-                          },
-                        ]}
                       >
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            fontWeight: '800',
-                            color: cardFlipped ? '#FFFFFF' : theme.navy,
-                          }}
-                        >
-                          Next
-                        </Text>
-                        <Ionicons
-                          name="chevron-forward"
-                          size={16}
-                          color={cardFlipped ? '#FFFFFF' : theme.navy}
-                        />
-                      </SmoothPressable>
-                    </View>
-                  </DepthCard>
-                </SmoothPressable>
+                        Next
+                      </Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={16}
+                        color={cardFlipped ? '#FFFFFF' : theme.navy}
+                      />
+                    </SmoothPressable>
+                  </View>
+                </DepthCard>
 
                 {/* Spaced Repetition Rating Buttons */}
                 <View style={styles.spacedRepetitionRow}>

@@ -9,7 +9,7 @@ import {
   Text,
   View,
 } from 'react-native';
-import { AnimeAvatar } from '@/components/AnimeAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { SmoothPressable } from '@/components/SmoothPressable';
 import { useOras } from '@/context/OrasContext';
 
@@ -93,14 +93,7 @@ export function StudentGlanceSummaryModal({
           {/* Top Student Identity Bar */}
           <View style={styles.topStudentRow}>
             <View style={styles.studentPill}>
-              <AnimeAvatar
-                config={
-                  account.useCustomAvatar ? account.customAvatar : undefined
-                }
-                presetId={account.presetAvatarId}
-                size={32}
-                bgColors={[activeTheme.primary, activeTheme.secondary]}
-              />
+              <UserAvatar size={32} />
               <View>
                 <Text style={styles.studentNameText}>{account.name}</Text>
                 <Text style={styles.studentLevelSub}>

@@ -46,10 +46,31 @@ export interface CustomAvatarConfig {
 
 export interface StudentPreferences {
   classReminders: boolean;
+  studyReminders?: boolean;
   requirementAlerts: boolean;
+  assignmentReminders?: boolean;
+  examReminders?: boolean;
+  scheduleAlerts?: boolean;
+  announcements?: boolean;
+  reminderTimingMin?: number; // 10, 15, 30, 60
   soundEffects: boolean;
+  vibrationEnabled?: boolean;
   dailyDigest: boolean;
   autoSaveAI: boolean;
+  // Study preferences
+  pomodoroFocusMin?: number;
+  pomodoroShortBreakMin?: number;
+  pomodoroLongBreakMin?: number;
+  pomodoroAutoTransition?: boolean;
+  dailyStudyGoalMin?: number;
+  // Appearance
+  layoutDensity?: 'comfortable' | 'compact';
+  fontSizePreference?: 'small' | 'medium' | 'large';
+  cardGlowEffect?: boolean;
+  // Security & Privacy
+  biometricLock?: boolean;
+  analyticsOptOut?: boolean;
+  profilePublic?: boolean;
 }
 
 export interface ClassScheduleItem {
@@ -247,6 +268,10 @@ export interface StudentAccount {
   notifications: NotificationItem[];
   unlockedAchievementIds: string[];
   language?: 'en' | 'fil';
+  email?: string;
+  username?: string;
+  schoolName?: string;
+  passwordHash?: string;
   activityByDate: Record<string, number>; // YYYY-MM-DD -> minutes studied
 }
 
@@ -1421,7 +1446,7 @@ export const ACADEMIC_ACHIEVEMENTS: AcademicAchievement[] = [
 // ── Default Seed Data Generator for New Accounts ─────────────────────────────
 
 export function createDefaultAccount(
-  partial?: Partial<Pick<StudentAccount, 'id' | 'name' | 'level' | 'themeId' | 'presetAvatarId' | 'darkMode'>>
+  partial?: Partial<StudentAccount>
 ): StudentAccount {
   const today = new Date();
   const fmtDate = (offsetDays: number) => {
@@ -1454,10 +1479,29 @@ export function createDefaultAccount(
     studyMode: 'Focused',
     preferences: {
       classReminders: true,
+      studyReminders: true,
       requirementAlerts: true,
+      assignmentReminders: true,
+      examReminders: true,
+      scheduleAlerts: true,
+      announcements: true,
+      reminderTimingMin: 15,
       soundEffects: true,
+      vibrationEnabled: true,
       dailyDigest: true,
       autoSaveAI: true,
+      pomodoroFocusMin: 25,
+      pomodoroShortBreakMin: 5,
+      pomodoroLongBreakMin: 15,
+      pomodoroAutoTransition: true,
+      dailyStudyGoalMin: 60,
+      layoutDensity: 'comfortable',
+      fontSizePreference: 'medium',
+      cardGlowEffect: true,
+      biometricLock: false,
+      analyticsOptOut: false,
+      profilePublic: true,
+      ...partial?.preferences,
     },
     weeklyGoalMinutes: 300,
     studyStreak: 7,
@@ -2151,6 +2195,10 @@ export function createDefaultAccount(
       'early-finisher',
     ],
     language: 'en',
+    email: partial?.email || 'alex.rivera@orasoras.edu',
+    username: partial?.username || 'alex_rivera',
+    schoolName: partial?.schoolName || 'Philippine Science High School',
+    passwordHash: partial?.passwordHash || 'oras2026',
     activityByDate,
   };
 }

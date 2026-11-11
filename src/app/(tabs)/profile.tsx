@@ -10,7 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { AnimeAvatar } from '@/components/AnimeAvatar';
+import { UserAvatar } from '@/components/UserAvatar';
 import { AvatarStudioModal } from '@/components/AvatarStudioModal';
 import { DepthCard, Icon3D } from '@/components/DepthUI';
 import { SmoothPressable } from '@/components/SmoothPressable';
@@ -214,6 +214,9 @@ export default function ProfileScreen() {
               </SmoothPressable>
               <SmoothPressable
                 onPress={() => router.push('/settings' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel="Open Settings & Account"
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                 style={styles.heroIconBtn}
               >
                 <Ionicons name="settings" size={18} color="#FFFFFF" />
@@ -223,14 +226,7 @@ export default function ProfileScreen() {
 
           <View style={styles.avatarCenterBlock}>
             <SmoothPressable onPress={() => setStudioVisible(true)}>
-              <AnimeAvatar
-                config={
-                  account.useCustomAvatar ? account.customAvatar : undefined
-                }
-                presetId={account.presetAvatarId}
-                size={112}
-                bgColors={[activeTheme.primary, activeTheme.secondary]}
-              />
+              <UserAvatar size={112} />
             </SmoothPressable>
 
             <Text style={styles.studentName}>{account.name}</Text>
@@ -539,7 +535,7 @@ export default function ProfileScreen() {
                       },
                     ]}
                   >
-                    <AnimeAvatar presetId={av.id} size={52} />
+                    <UserAvatar avatarId={av.id} size={56} />
                     <Text
                       style={[
                         styles.presetAvatarName,
@@ -902,11 +898,11 @@ export default function ProfileScreen() {
                       },
                     ]}
                   >
-                    <AnimeAvatar
+                    <UserAvatar
+                      avatarId={acc.presetAvatarId}
                       config={
                         acc.useCustomAvatar ? acc.customAvatar : undefined
                       }
-                      presetId={acc.presetAvatarId}
                       size={44}
                     />
                     <View style={styles.flex}>

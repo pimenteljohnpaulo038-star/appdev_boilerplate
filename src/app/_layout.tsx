@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import * as SystemUI from 'expo-system-ui';
@@ -39,7 +40,7 @@ function RootLayoutContent() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    Promise.all([getDb(), refreshModelStatus()])
+    Promise.all([getDb(), refreshModelStatus(), Ionicons.loadFont()])
       .catch((e) => console.warn('Init failed:', e))
       .finally(() => setReady(true));
   }, []);
@@ -108,12 +109,18 @@ function RootNavigator() {
             name="quiz"
             options={{ headerShown: false, title: 'Mastery Quiz' }}
           />
-          <Stack.Screen name="settings" options={{ title: 'Data & Settings' }} />
+          <Stack.Screen
+            name="settings"
+            options={{ headerShown: false, title: 'Settings' }}
+          />
           <Stack.Screen
             name="chat-settings"
             options={{ title: 'OrasOras AI Settings' }}
           />
-          <Stack.Screen name="calculator" options={{ title: 'Calculator' }} />
+          <Stack.Screen
+            name="calculator"
+            options={{ headerShown: false, title: 'Calculator' }}
+          />
           <Stack.Screen name="privacy" options={{ title: 'Privacy Policy' }} />
           <Stack.Screen
             name="terms"

@@ -4,6 +4,7 @@ import React from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SmoothPressable } from '@/components/SmoothPressable';
+import { UserAvatar } from '@/components/UserAvatar';
 import { useOras } from '@/context/OrasContext';
 import { useTheme } from '@/theme';
 
@@ -158,11 +159,19 @@ export function FloatingTabBar({ state, navigation }: TabBarProps) {
                   },
                 ]}
               >
-                <Ionicons
-                  name={focused ? cfg.filled : cfg.outline}
-                  size={20}
-                  color={focused ? activeTheme.primary : theme.textMuted}
-                />
+                {route.name === 'profile' ? (
+                  <UserAvatar
+                    size={focused ? 24 : 22}
+                    showBorder={focused}
+                    borderColor={activeTheme.primary}
+                  />
+                ) : (
+                  <Ionicons
+                    name={focused ? cfg.filled : cfg.outline}
+                    size={20}
+                    color={focused ? activeTheme.primary : theme.textMuted}
+                  />
+                )}
               </View>
               <Text
                 style={[
