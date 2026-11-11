@@ -246,7 +246,6 @@ export interface StudentAccount {
   darkMode: boolean;
   presetAvatarId: number; // 0..11 (12 anime preset avatars)
   useCustomAvatar: boolean;
-  useOfficialAvatar?: boolean;
   customAvatar: CustomAvatarConfig;
   profileTitle: ProfileTitle;
   studyMode: StudyMode;
@@ -318,7 +317,7 @@ export const ANIME_PRESET_AVATARS: AnimePresetAvatar[] = [
     id: 0,
     name: 'Akira',
     title: 'Honor Strategist',
-    bgGradient: ['#0F172A', '#1E293B'],
+    bgGradient: ['#3B82F6', '#6366F1'],
     config: { character: 'boy', faceShape: 0, skinTone: 1, hairstyle: 0, hairColor: 0, outfit: 0, outfitColor: 0, accessory: 1 },
   },
   {
@@ -1476,7 +1475,6 @@ export function createDefaultAccount(
     darkMode: partial?.darkMode ?? true,
     presetAvatarId: presetId,
     useCustomAvatar: false,
-    useOfficialAvatar: partial?.useOfficialAvatar ?? true,
     customAvatar: { ...preset.config },
     profileTitle: 'Focused Learner',
     studyMode: 'Focused',

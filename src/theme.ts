@@ -1,4 +1,7 @@
+import { useContext, useMemo } from 'react';
 import { useSettings } from '@/settings/SettingsContext';
+import { OrasContext } from '@/context/OrasContext';
+import { COLOR_THEMES } from '@/data/orasorasData';
 
 export interface Theme {
   isDark: boolean;
@@ -18,6 +21,9 @@ export interface Theme {
   primary: string;
   primaryDark: string;
   primaryLight: string;
+  secondary: string;
+  accent: string;
+  glow: string;
   indigo: string;
   indigoLight: string;
   emerald: string;
@@ -60,6 +66,9 @@ const light: Theme = {
   primary: '#3B82F6',
   primaryDark: '#2563EB',
   primaryLight: '#EFF6FF',
+  secondary: '#6366F1',
+  accent: '#10B981',
+  glow: 'rgba(59, 130, 246, 0.28)',
   indigo: '#6366F1',
   indigoLight: '#EEF2FF',
   emerald: '#10B981',
@@ -102,6 +111,9 @@ const dark: Theme = {
   primary: '#3B82F6',
   primaryDark: '#2563EB',
   primaryLight: '#1E295B',
+  secondary: '#6366F1',
+  accent: '#10B981',
+  glow: 'rgba(59, 130, 246, 0.28)',
   indigo: '#6366F1',
   indigoLight: '#23275E',
   emerald: '#10B981',
@@ -127,5 +139,25 @@ const dark: Theme = {
 };
 
 export function useTheme(): Theme {
-  return useSettings().settings.theme === 'dark' ? dark : light;
+  const { settings } = useSettings();
+  const oras = useContext(OrasContext);
+
+  const isDark = oras?.account ? oras.account.darkMode : settings.theme === 'dark';
+  const baseTheme = isDark ? dark : light;
+  const activeColorTheme = oras?.activeTheme || COLOR_THEMES[0];
+
+  return useMemo(() => {
+    return {
+      ...baseTheme,
+      isDark,
+      primary: activeColorTheme.primary,
+      tint: activeColorTheme.primary,
+      buttonPrimary: activeColorTheme.primary,
+      userBubble: activeColorTheme.primary,
+      secondary: activeColorTheme.secondary,
+      accent: activeColorTheme.accent,
+      glow: activeColorTheme.glow,
+      borderHighlight: isDark ? `${activeColorTheme.primary}45` : 'rgba(255, 255, 255, 0.9)',
+    };
+  }, [baseTheme, isDark, activeColorTheme]);
 }
