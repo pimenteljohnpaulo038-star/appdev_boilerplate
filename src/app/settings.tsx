@@ -38,8 +38,7 @@ export type SettingsCategory =
   | 'avatar'
   | 'appearance'
   | 'language'
-  | 'notifications'
-  | 'study'
+  | 'notifications_study'
   | 'privacy'
   | 'storage'
   | 'about';
@@ -54,11 +53,10 @@ interface CategoryItem {
 
 const CATEGORIES: CategoryItem[] = [
   { id: 'account', title: 'My Account', desc: 'Manage your personal student account', icon: 'person-circle-outline', color: '#3B82F6' },
-  { id: 'avatar', title: 'Profile & Avatar', desc: 'Customize your identity and anime avatar', icon: 'sparkles-outline', color: '#8B5CF6' },
+  { id: 'avatar', title: 'Profile & Avatar', desc: '12 anime characters & custom studio', icon: 'sparkles-outline', color: '#8B5CF6' },
   { id: 'appearance', title: 'Appearance & Themes', desc: 'Display modes, 12 academic themes & layout', icon: 'color-palette-outline', color: '#06B6D4' },
-  { id: 'language', title: 'Language', desc: 'Choose your preferred language (EN / FIL)', icon: 'globe-outline', color: '#10B981' },
-  { id: 'notifications', title: 'Notifications', desc: 'Manage class, study, and exam reminders', icon: 'notifications-outline', color: '#F59E0B' },
-  { id: 'study', title: 'Study Preferences', desc: 'Pomodoro timer durations & daily study goals', icon: 'timer-outline', color: '#EC4899' },
+  { id: 'language', title: 'App Language / Wika', desc: 'Choose your preferred language (EN / FIL)', icon: 'globe-outline', color: '#10B981' },
+  { id: 'notifications_study', title: 'Notifications & Study Preferences', desc: 'Reminders, pomodoro duration & daily goals', icon: 'notifications-outline', color: '#F59E0B' },
   { id: 'privacy', title: 'Privacy & Security', desc: 'Password, biometric lock, data export & reset', icon: 'shield-checkmark-outline', color: '#6366F1' },
   { id: 'storage', title: 'Storage & Offline Data', desc: 'Manage offline PDFs, cache & JSON backups', icon: 'server-outline', color: '#14B8A6' },
   { id: 'about', title: 'About & Support', desc: 'App info v1.2.0, FAQs, terms & feedback', icon: 'help-circle-outline', color: '#0EA5E9' },
@@ -197,18 +195,8 @@ export default function SettingsScreen() {
           />
         )}
 
-        {activeCategory === 'notifications' && (
-          <NotificationsSection
-            account={account}
-            activeTheme={activeTheme}
-            theme={theme}
-            updateAccount={updateAccount}
-            togglePreference={togglePreference}
-          />
-        )}
-
-        {activeCategory === 'study' && (
-          <StudyPreferencesSection
+        {activeCategory === 'notifications_study' && (
+          <NotificationsStudySection
             account={account}
             activeTheme={activeTheme}
             theme={theme}
@@ -1007,9 +995,9 @@ function LanguageSection({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// 6. NOTIFICATIONS SECTION
+// 5. NOTIFICATIONS & STUDY PREFERENCES SECTION
 // ══════════════════════════════════════════════════════════════════════════════
-function NotificationsSection({
+function NotificationsStudySection({
   account,
   activeTheme,
   theme,
@@ -1022,6 +1010,7 @@ function NotificationsSection({
   updateAccount: ReturnType<typeof useOras>['updateAccount'];
   togglePreference: ReturnType<typeof useOras>['togglePreference'];
 }) {
+  const [tab, setTab] = useState<'notifications' | 'study'>('notifications');
   const p = account.preferences;
 
   const notifRows: { key: keyof typeof p; title: string; desc: string }[] = [
@@ -1035,218 +1024,269 @@ function NotificationsSection({
 
   return (
     <View style={styles.subpageContainer}>
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.navy }]}>Reminder Categories</Text>
-
-        {notifRows.map((row) => (
-          <View key={row.key} style={[styles.toggleRow, { borderBottomColor: theme.border }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.toggleTitle, { color: theme.navy }]}>{row.title}</Text>
-              <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>{row.desc}</Text>
-            </View>
-            <Switch
-              value={Boolean(p[row.key] ?? true)}
-              onValueChange={() => togglePreference(row.key)}
-              trackColor={{ false: theme.border, true: activeTheme.primary }}
-            />
-          </View>
-        ))}
-      </View>
-
-      {/* Timing Lead Time */}
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.navy }]}>Reminder Lead Time</Text>
-        <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
-          How early should OrasOras alert you before classes or study sessions?
-        </Text>
-
-        <View style={styles.pillRow}>
-          {[10, 15, 30, 60].map((mins) => {
-            const active = (p.reminderTimingMin ?? 15) === mins;
-            return (
-              <SmoothPressable
-                key={mins}
-                onPress={() => updateAccount({ preferences: { ...p, reminderTimingMin: mins } })}
-                style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
-              >
-                <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>
-                  {mins === 60 ? '1 hour' : `${mins} mins`}
-                </Text>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-
-        {/* Audio & Haptic Feedback */}
-        <View style={[styles.toggleRow, { marginTop: 14, borderBottomColor: theme.border }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.toggleTitle, { color: theme.navy }]}>Sound Effects</Text>
-            <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>Chimes on timer completion and quiz milestones</Text>
-          </View>
-          <Switch
-            value={p.soundEffects}
-            onValueChange={() => togglePreference('soundEffects')}
-            trackColor={{ false: theme.border, true: activeTheme.primary }}
+      {/* Top Segmented Tabs */}
+      <View style={[styles.tabBar, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+        <SmoothPressable
+          onPress={() => setTab('notifications')}
+          style={[styles.tabBtn, tab === 'notifications' && { backgroundColor: activeTheme.primary }]}
+        >
+          <Ionicons
+            name="notifications-outline"
+            size={15}
+            color={tab === 'notifications' ? '#FFFFFF' : theme.textSecondary}
           />
-        </View>
-
-        <View style={styles.toggleRow}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.toggleTitle, { color: theme.navy }]}>Haptic Vibration</Text>
-            <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>Tactile buzz when intervals change</Text>
-          </View>
-          <Switch
-            value={p.vibrationEnabled ?? true}
-            onValueChange={() => togglePreference('vibrationEnabled')}
-            trackColor={{ false: theme.border, true: activeTheme.primary }}
+          <Text style={[styles.tabBtnText, { color: tab === 'notifications' ? '#FFFFFF' : theme.textSecondary }]}>
+            Notifications
+          </Text>
+        </SmoothPressable>
+        <SmoothPressable
+          onPress={() => setTab('study')}
+          style={[styles.tabBtn, tab === 'study' && { backgroundColor: activeTheme.primary }]}
+        >
+          <Ionicons
+            name="timer-outline"
+            size={15}
+            color={tab === 'study' ? '#FFFFFF' : theme.textSecondary}
           />
-        </View>
-      </View>
-    </View>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// 7. STUDY PREFERENCES SECTION
-// ══════════════════════════════════════════════════════════════════════════════
-function StudyPreferencesSection({
-  account,
-  activeTheme,
-  theme,
-  updateAccount,
-  togglePreference,
-}: {
-  account: ReturnType<typeof useOras>['account'];
-  activeTheme: ReturnType<typeof useOras>['activeTheme'];
-  theme: ReturnType<typeof useTheme>;
-  updateAccount: ReturnType<typeof useOras>['updateAccount'];
-  togglePreference: ReturnType<typeof useOras>['togglePreference'];
-}) {
-  const p = account.preferences;
-
-  return (
-    <View style={styles.subpageContainer}>
-      {/* Pomodoro Durations */}
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.navy }]}>Pomodoro Timer Durations</Text>
-        <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
-          Changes instantly sync with the Pomodoro timer in Study Hub.
-        </Text>
-
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Focus Block Duration</Text>
-        <View style={styles.pillRow}>
-          {[20, 25, 30, 45, 50, 60].map((mins) => {
-            const active = (p.pomodoroFocusMin ?? 25) === mins;
-            return (
-              <SmoothPressable
-                key={mins}
-                onPress={() => updateAccount({ preferences: { ...p, pomodoroFocusMin: mins } })}
-                style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
-              >
-                <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary, marginTop: 12 }]}>Short Break Duration</Text>
-        <View style={styles.pillRow}>
-          {[3, 5, 10].map((mins) => {
-            const active = (p.pomodoroShortBreakMin ?? 5) === mins;
-            return (
-              <SmoothPressable
-                key={mins}
-                onPress={() => updateAccount({ preferences: { ...p, pomodoroShortBreakMin: mins } })}
-                style={[styles.smallPill, active ? { backgroundColor: '#10B981' } : { backgroundColor: theme.inputBackground }]}
-              >
-                <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-
-        <Text style={[styles.fieldLabel, { color: theme.textSecondary, marginTop: 12 }]}>Long Break Duration</Text>
-        <View style={styles.pillRow}>
-          {[15, 20, 30].map((mins) => {
-            const active = (p.pomodoroLongBreakMin ?? 15) === mins;
-            return (
-              <SmoothPressable
-                key={mins}
-                onPress={() => updateAccount({ preferences: { ...p, pomodoroLongBreakMin: mins } })}
-                style={[styles.smallPill, active ? { backgroundColor: '#6366F1' } : { backgroundColor: theme.inputBackground }]}
-              >
-                <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-
-        <View style={[styles.toggleRow, { marginTop: 14 }]}>
-          <View style={{ flex: 1 }}>
-            <Text style={[styles.toggleTitle, { color: theme.navy }]}>Auto-Transition Breaks</Text>
-            <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>
-              Automatically start break countdown when focus block completes
-            </Text>
-          </View>
-          <Switch
-            value={p.pomodoroAutoTransition ?? true}
-            onValueChange={() => togglePreference('pomodoroAutoTransition')}
-            trackColor={{ false: theme.border, true: activeTheme.primary }}
-          />
-        </View>
+          <Text style={[styles.tabBtnText, { color: tab === 'study' ? '#FFFFFF' : theme.textSecondary }]}>
+            Study Preferences
+          </Text>
+        </SmoothPressable>
       </View>
 
-      {/* Daily Study Goal */}
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.navy }]}>Daily Study Target</Text>
-        <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
-          Sets your target study minutes per day across all subjects.
-        </Text>
+      {tab === 'notifications' ? (
+        <>
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Reminder Categories</Text>
 
-        <View style={styles.pillRow}>
-          {[30, 60, 90, 120, 180, 240].map((mins) => {
-            const active = (p.dailyStudyGoalMin ?? 60) === mins;
-            return (
-              <SmoothPressable
-                key={mins}
-                onPress={() => updateAccount({ preferences: { ...p, dailyStudyGoalMin: mins }, weeklyGoalMinutes: mins * 5 })}
-                style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
-              >
-                <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-      </View>
-
-      {/* Default Study Mode */}
-      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
-        <Text style={[styles.cardTitle, { color: theme.navy }]}>Default Study Mode</Text>
-        <View style={{ gap: 8, marginTop: 8 }}>
-          {STUDY_MODES.map((mode) => {
-            const active = account.studyMode === mode.id;
-            return (
-              <SmoothPressable
-                key={mode.id}
-                onPress={() => updateAccount({ studyMode: mode.id })}
-                style={[
-                  styles.modeSelectCard,
-                  { backgroundColor: theme.card, borderColor: active ? activeTheme.primary : theme.border },
-                  active && { borderWidth: 2 },
-                ]}
-              >
+            {notifRows.map((row) => (
+              <View key={row.key} style={[styles.toggleRow, { borderBottomColor: theme.border }]}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.modeSelectTitle, { color: theme.navy }]}>{mode.label}</Text>
-                  <Text style={[styles.modeSelectDesc, { color: theme.textSecondary }]}>{mode.desc}</Text>
+                  <Text style={[styles.toggleTitle, { color: theme.navy }]}>{row.title}</Text>
+                  <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>{row.desc}</Text>
                 </View>
-                <View style={[styles.modeDurationBadge, { backgroundColor: `${activeTheme.primary}18` }]}>
-                  <Text style={[styles.modeDurationText, { color: activeTheme.primary }]}>{mode.focusMin}m</Text>
-                </View>
-              </SmoothPressable>
-            );
-          })}
-        </View>
-      </View>
+                <Switch
+                  value={Boolean(p[row.key] ?? true)}
+                  onValueChange={() => togglePreference(row.key)}
+                  trackColor={{ false: theme.border, true: activeTheme.primary }}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* Timing Lead Time & Audio Feedback */}
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Reminder Lead Time & Audio</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+              How early should OrasOras alert you before classes or study sessions?
+            </Text>
+
+            <View style={styles.pillRow}>
+              {[10, 15, 30, 60].map((mins) => {
+                const active = (p.reminderTimingMin ?? 15) === mins;
+                return (
+                  <SmoothPressable
+                    key={mins}
+                    onPress={() => updateAccount({ preferences: { ...p, reminderTimingMin: mins } })}
+                    style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>
+                      {mins === 60 ? '1 hour' : `${mins} mins`}
+                    </Text>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+
+            {/* Audio & Haptic Feedback */}
+            <View style={[styles.toggleRow, { marginTop: 14, borderBottomColor: theme.border }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleTitle, { color: theme.navy }]}>Notification Sounds</Text>
+                <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>Chimes on timer completion and quiz milestones</Text>
+              </View>
+              <Switch
+                value={p.soundEffects}
+                onValueChange={() => togglePreference('soundEffects')}
+                trackColor={{ false: theme.border, true: activeTheme.primary }}
+              />
+            </View>
+
+            <View style={styles.toggleRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleTitle, { color: theme.navy }]}>Vibration Settings</Text>
+                <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>Tactile buzz when intervals change</Text>
+              </View>
+              <Switch
+                value={p.vibrationEnabled ?? true}
+                onValueChange={() => togglePreference('vibrationEnabled')}
+                trackColor={{ false: theme.border, true: activeTheme.primary }}
+              />
+            </View>
+          </View>
+        </>
+      ) : (
+        <>
+          {/* Pomodoro Durations */}
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Pomodoro Timer Durations</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+              Changes instantly sync with the Pomodoro timer in Study Hub.
+            </Text>
+
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary }]}>Pomodoro Focus Duration</Text>
+            <View style={styles.pillRow}>
+              {[20, 25, 30, 45, 50, 60].map((mins) => {
+                const active = (p.pomodoroFocusMin ?? 25) === mins;
+                return (
+                  <SmoothPressable
+                    key={mins}
+                    onPress={() => updateAccount({ preferences: { ...p, pomodoroFocusMin: mins } })}
+                    style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary, marginTop: 12 }]}>Short Break Duration</Text>
+            <View style={styles.pillRow}>
+              {[3, 5, 10].map((mins) => {
+                const active = (p.pomodoroShortBreakMin ?? 5) === mins;
+                return (
+                  <SmoothPressable
+                    key={mins}
+                    onPress={() => updateAccount({ preferences: { ...p, pomodoroShortBreakMin: mins } })}
+                    style={[styles.smallPill, active ? { backgroundColor: '#10B981' } : { backgroundColor: theme.inputBackground }]}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+
+            <Text style={[styles.fieldLabel, { color: theme.textSecondary, marginTop: 12 }]}>Long Break Duration</Text>
+            <View style={styles.pillRow}>
+              {[15, 20, 30].map((mins) => {
+                const active = (p.pomodoroLongBreakMin ?? 15) === mins;
+                return (
+                  <SmoothPressable
+                    key={mins}
+                    onPress={() => updateAccount({ preferences: { ...p, pomodoroLongBreakMin: mins } })}
+                    style={[styles.smallPill, active ? { backgroundColor: '#6366F1' } : { backgroundColor: theme.inputBackground }]}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+
+            <View style={[styles.toggleRow, { marginTop: 14 }]}>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.toggleTitle, { color: theme.navy }]}>Automatic Study Session Transitions</Text>
+                <Text style={[styles.toggleDesc, { color: theme.textSecondary }]}>
+                  Automatically transition between focus and break timers without manual taps
+                </Text>
+              </View>
+              <Switch
+                value={p.pomodoroAutoTransition ?? true}
+                onValueChange={() => togglePreference('pomodoroAutoTransition')}
+                trackColor={{ false: theme.border, true: activeTheme.primary }}
+              />
+            </View>
+          </View>
+
+          {/* Daily Study Goals */}
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Daily Study Goals</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+              Sets your target focus minutes per day across all subjects.
+            </Text>
+
+            <View style={styles.pillRow}>
+              {[30, 60, 90, 120, 180, 240].map((mins) => {
+                const active = (p.dailyStudyGoalMin ?? 60) === mins;
+                return (
+                  <SmoothPressable
+                    key={mins}
+                    onPress={() => updateAccount({ preferences: { ...p, dailyStudyGoalMin: mins }, weeklyGoalMinutes: mins * 5 })}
+                    style={[styles.smallPill, active ? { backgroundColor: activeTheme.primary } : { backgroundColor: theme.inputBackground }]}
+                  >
+                    <Text style={{ color: active ? '#FFFFFF' : theme.textSecondary, fontWeight: '700' }}>{mins}m</Text>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Preferred Study Schedule */}
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Preferred Study Schedule</Text>
+            <Text style={[styles.cardSubtitle, { color: theme.textSecondary }]}>
+              Helps OrasOras optimize your daily review and study plan digests.
+            </Text>
+
+            <View style={{ gap: 8, marginTop: 8 }}>
+              {[
+                { id: 'morning', label: 'Morning Focus', desc: '6:00 AM – 12:00 PM · Best for high cognitive tasks' },
+                { id: 'afternoon', label: 'Afternoon Energy', desc: '12:00 PM – 6:00 PM · Ideal for practice problems' },
+                { id: 'evening', label: 'Evening Calm', desc: '6:00 PM – 10:00 PM · Great for reading and flashcards' },
+                { id: 'night', label: 'Night Owl', desc: '10:00 PM – 2:00 AM · Uninterrupted late study' },
+              ].map((sched) => {
+                const active = (p.preferredScheduleTime || 'morning') === sched.id;
+                return (
+                  <SmoothPressable
+                    key={sched.id}
+                    onPress={() => updateAccount({ preferences: { ...p, preferredScheduleTime: sched.id as any } })}
+                    style={[
+                      styles.modeSelectCard,
+                      { backgroundColor: theme.card, borderColor: active ? activeTheme.primary : theme.border },
+                      active && { borderWidth: 2 },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modeSelectTitle, { color: theme.navy }]}>{sched.label}</Text>
+                      <Text style={[styles.modeSelectDesc, { color: theme.textSecondary }]}>{sched.desc}</Text>
+                    </View>
+                    {active && (
+                      <Ionicons name="checkmark-circle" size={20} color={activeTheme.primary} />
+                    )}
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+          </View>
+
+          {/* Default Study Mode */}
+          <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: theme.border }]}>
+            <Text style={[styles.cardTitle, { color: theme.navy }]}>Preferred Study Mode</Text>
+            <View style={{ gap: 8, marginTop: 8 }}>
+              {STUDY_MODES.map((mode) => {
+                const active = account.studyMode === mode.id;
+                return (
+                  <SmoothPressable
+                    key={mode.id}
+                    onPress={() => updateAccount({ studyMode: mode.id })}
+                    style={[
+                      styles.modeSelectCard,
+                      { backgroundColor: theme.card, borderColor: active ? activeTheme.primary : theme.border },
+                      active && { borderWidth: 2 },
+                    ]}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.modeSelectTitle, { color: theme.navy }]}>{mode.label}</Text>
+                      <Text style={[styles.modeSelectDesc, { color: theme.textSecondary }]}>{mode.desc}</Text>
+                    </View>
+                    <View style={[styles.modeDurationBadge, { backgroundColor: `${activeTheme.primary}18` }]}>
+                      <Text style={[styles.modeDurationText, { color: activeTheme.primary }]}>{mode.focusMin}m</Text>
+                    </View>
+                  </SmoothPressable>
+                );
+              })}
+            </View>
+          </View>
+        </>
+      )}
     </View>
   );
 }

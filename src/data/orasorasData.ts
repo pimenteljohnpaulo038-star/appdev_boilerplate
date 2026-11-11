@@ -63,6 +63,7 @@ export interface StudentPreferences {
   pomodoroLongBreakMin?: number;
   pomodoroAutoTransition?: boolean;
   dailyStudyGoalMin?: number;
+  preferredScheduleTime?: 'morning' | 'afternoon' | 'evening' | 'night';
   // Appearance
   layoutDensity?: 'comfortable' | 'compact';
   fontSizePreference?: 'small' | 'medium' | 'large';

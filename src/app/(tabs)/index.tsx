@@ -32,10 +32,7 @@ export default function HomeScreen() {
     account,
     activeTheme,
     toggleRequirementComplete,
-    language,
     t,
-    setLanguage,
-    setControlCenterVisible,
     setGlanceSummaryVisible,
   } = useOras();
 
@@ -141,54 +138,7 @@ export default function HomeScreen() {
             </View>
           </SmoothPressable>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <SmoothPressable
-              onPress={() => router.push('/settings' as Href)}
-              accessibilityRole="button"
-              accessibilityLabel="Open Settings & Account"
-              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={[
-                styles.langToggleBtn,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: `${activeTheme.primary}40`,
-                },
-              ]}
-            >
-              <Ionicons name="settings-sharp" size={13} color={activeTheme.primary} />
-            </SmoothPressable>
-
-            <SmoothPressable
-              onPress={() => setControlCenterVisible(true)}
-              accessibilityLabel="Open Control Center"
-              style={[
-                styles.langToggleBtn,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: `${activeTheme.primary}40`,
-                },
-              ]}
-            >
-              <Ionicons name="options-outline" size={13} color={activeTheme.primary} />
-            </SmoothPressable>
-
-            <SmoothPressable
-              onPress={() => void setLanguage(language === 'en' ? 'fil' : 'en')}
-              accessibilityLabel="Switch application language"
-              style={[
-                styles.langToggleBtn,
-                {
-                  backgroundColor: theme.surface,
-                  borderColor: `${activeTheme.primary}40`,
-                },
-              ]}
-            >
-              <Ionicons name="globe-outline" size={13} color={activeTheme.primary} />
-              <Text style={[styles.langToggleText, { color: activeTheme.primary }]}>
-                {language === 'en' ? 'EN' : 'FIL'}
-              </Text>
-            </SmoothPressable>
-
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
             <SmoothPressable
               onPress={() =>
                 showMessage(
@@ -213,6 +163,24 @@ export default function HomeScreen() {
                 <Text style={[styles.statusSubtitle, { color: theme.textMuted }]}>
                   Local Storage
                 </Text>
+              </View>
+            </SmoothPressable>
+
+            <SmoothPressable
+              onPress={() => router.push('/settings' as Href)}
+              accessibilityRole="button"
+              accessibilityLabel="Open Settings & Account"
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={[
+                styles.headerGearButton,
+                {
+                  backgroundColor: activeTheme.primary,
+                  shadowColor: activeTheme.primary,
+                },
+              ]}
+            >
+              <View style={styles.headerGearInnerGlow}>
+                <Ionicons name="settings-sharp" size={22} color="#FFFFFF" />
               </View>
             </SmoothPressable>
           </View>
@@ -309,128 +277,166 @@ export default function HomeScreen() {
 
         {/* 3. Smart Summary Cards (2x2 Dimensional Grid) */}
         <View style={styles.summaryGrid}>
+          {/* Card 1: Classes Today */}
           <SmoothPressable
             onPress={() => router.push('/calendar' as Href)}
             style={styles.summaryHalf}
           >
-            <DepthCard variant="mini" style={styles.summaryCardInner}>
+            <DepthCard
+              variant="mini"
+              style={[
+                styles.summaryCardInner,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(30, 58, 138, 0.22)' : 'rgba(239, 246, 255, 0.95)',
+                  borderColor: theme.isDark ? 'rgba(59, 130, 246, 0.35)' : 'rgba(191, 219, 254, 0.9)',
+                },
+              ]}
+            >
               <View style={styles.summaryTop}>
-                <Icon3D name="calendar" bg="#3B82F6" boxSize={36} size={17} />
-                <View
-                  style={[
-                    styles.summaryStatusChip,
-                    { backgroundColor: 'rgba(59,130,246,0.12)' },
-                  ]}
-                >
-                  <Text style={[styles.summaryStatusText, { color: '#3B82F6' }]}>
-                    TODAY
-                  </Text>
+                <View style={[styles.glowIconContainer, { backgroundColor: 'rgba(59,130,246,0.18)', shadowColor: '#3B82F6' }]}>
+                  <Ionicons name="calendar" size={18} color="#2563EB" />
+                </View>
+                <View style={[styles.countdownRingPill, { backgroundColor: 'rgba(59,130,246,0.12)', borderColor: 'rgba(59,130,246,0.3)' }]}>
+                  <Ionicons name="time" size={11} color="#2563EB" />
+                  <Text style={[styles.countdownRingText, { color: '#2563EB' }]}>IN 25M</Text>
                 </View>
               </View>
-              <Text style={[styles.summaryBigText, { color: theme.navy }]}>
-                {activeClassesToday.length || 3} classes today
-              </Text>
-              <Text
-                style={[styles.summarySubText, { color: theme.textSecondary }]}
-              >
-                Next class starts in 25 minutes
+
+              <View style={styles.metricNumberRow}>
+                <Text style={[styles.metricBigNumber, { color: theme.navy }]}>
+                  {activeClassesToday.length || 3}
+                </Text>
+                <Text style={[styles.metricBigLabel, { color: theme.navy }]}>
+                  Classes Today
+                </Text>
+              </View>
+
+              <Text style={[styles.summarySubText, { color: theme.textSecondary }]} numberOfLines={1}>
+                Next: {nextClass?.subjectName ? nextClass.subjectName.split(' ')[0] : 'Calculus'} at {nextClass?.startTime || '09:00'}
               </Text>
             </DepthCard>
           </SmoothPressable>
 
+          {/* Card 2: Urgent Requirements */}
           <SmoothPressable
             onPress={() => router.push('/requirements' as Href)}
             style={styles.summaryHalf}
           >
-            <DepthCard variant="mini" style={styles.summaryCardInner}>
+            <DepthCard
+              variant="mini"
+              style={[
+                styles.summaryCardInner,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(120, 53, 15, 0.22)' : 'rgba(255, 251, 235, 0.95)',
+                  borderColor: theme.isDark ? 'rgba(245, 158, 11, 0.35)' : 'rgba(254, 215, 170, 0.9)',
+                },
+              ]}
+            >
               <View style={styles.summaryTop}>
-                <Icon3D
-                  name="document-text"
-                  bg="#F59E0B"
-                  boxSize={36}
-                  size={17}
-                />
-                <View
-                  style={[
-                    styles.summaryStatusChip,
-                    { backgroundColor: 'rgba(245,158,11,0.15)' },
-                  ]}
-                >
-                  <Text style={[styles.summaryStatusText, { color: '#D97706' }]}>
-                    DEADLINES
-                  </Text>
+                <View style={[styles.glowIconContainer, { backgroundColor: 'rgba(245,158,11,0.18)', shadowColor: '#F59E0B' }]}>
+                  <Ionicons name="alert-circle" size={18} color="#D97706" />
+                </View>
+                <View style={[styles.beaconDotWrap, { backgroundColor: 'rgba(245,158,11,0.15)', borderColor: 'rgba(245,158,11,0.35)' }]}>
+                  <View style={styles.beaconDot} />
+                  <Text style={[styles.beaconText, { color: '#B45309' }]}>ACTION</Text>
                 </View>
               </View>
-              <Text style={[styles.summaryBigText, { color: theme.navy }]}>
-                {dueSoonReqs.length || 2} requirements due soon
-              </Text>
-              <Text
-                style={[styles.summarySubText, { color: theme.textSecondary }]}
-              >
-                {overdueReqs.length} urgent / overdue alert
+
+              <View style={styles.metricNumberRow}>
+                <Text style={[styles.metricBigNumber, { color: '#D97706' }]}>
+                  {dueSoonReqs.length || 1}
+                </Text>
+                <Text style={[styles.metricBigLabel, { color: theme.navy }]}>
+                  {(dueSoonReqs.length || 1) === 1 ? 'Task Due Soon' : 'Tasks Due Soon'}
+                </Text>
+              </View>
+
+              <Text style={[styles.summarySubText, { color: theme.textSecondary }]} numberOfLines={1}>
+                {overdueReqs.length > 0 ? `${overdueReqs.length} overdue alert needs focus` : '1 requirement due soon'}
               </Text>
             </DepthCard>
           </SmoothPressable>
 
+          {/* Card 3: Weekly Goal */}
           <SmoothPressable
             onPress={() => router.push('/(tabs)/progress' as Href)}
             style={styles.summaryHalf}
           >
-            <DepthCard variant="mini" style={styles.summaryCardInner}>
+            <DepthCard
+              variant="mini"
+              style={[
+                styles.summaryCardInner,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(6, 78, 59, 0.22)' : 'rgba(240, 253, 244, 0.95)',
+                  borderColor: theme.isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(187, 247, 208, 0.9)',
+                },
+              ]}
+            >
               <View style={styles.summaryTop}>
-                <Icon3D
-                  name="checkmark-done-circle"
-                  bg="#10B981"
-                  boxSize={36}
-                  size={17}
-                />
-                <View
-                  style={[
-                    styles.summaryStatusChip,
-                    { backgroundColor: 'rgba(16,185,129,0.14)' },
-                  ]}
-                >
-                  <Text style={[styles.summaryStatusText, { color: '#059669' }]}>
-                    {weeklyGoalPct}% GOAL
+                <View style={[styles.glowIconContainer, { backgroundColor: 'rgba(16,185,129,0.18)', shadowColor: '#10B981' }]}>
+                  <Ionicons name="checkmark-done-circle" size={18} color="#059669" />
+                </View>
+                <View style={[styles.countdownRingPill, { backgroundColor: 'rgba(16,185,129,0.15)', borderColor: 'rgba(16,185,129,0.35)' }]}>
+                  <Ionicons name="sparkles" size={10} color="#059669" />
+                  <Text style={[styles.countdownRingText, { color: '#059669' }]}>
+                    {weeklyGoalPct >= 100 ? 'Goal Crushed!' : `${weeklyGoalPct}% Track`}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.summaryBigText, { color: theme.navy }]}>
-                {weeklyGoalPct}% of weekly goal
-              </Text>
-              <Text
-                style={[styles.summarySubText, { color: theme.textSecondary }]}
-              >
-                You completed {weeklyGoalPct}% of this week’s goal
+
+              <View style={styles.metricNumberRow}>
+                <Text style={[styles.metricBigNumber, { color: '#059669' }]}>
+                  {weeklyGoalPct}%
+                </Text>
+                <Text style={[styles.metricBigLabel, { color: theme.navy }]}>
+                  Weekly Goal
+                </Text>
+              </View>
+
+              <Text style={[styles.summarySubText, { color: theme.textSecondary }]} numberOfLines={1}>
+                {weeklyMinutesStudied} of {account.weeklyGoalMinutes || 300}m logged
               </Text>
             </DepthCard>
           </SmoothPressable>
 
+          {/* Card 4: Study Streak */}
           <SmoothPressable
             onPress={() => router.push('/(tabs)/study' as Href)}
             style={styles.summaryHalf}
           >
-            <DepthCard variant="mini" style={styles.summaryCardInner}>
+            <DepthCard
+              variant="mini"
+              style={[
+                styles.summaryCardInner,
+                {
+                  backgroundColor: theme.isDark ? 'rgba(49, 46, 129, 0.24)' : 'rgba(245, 243, 255, 0.95)',
+                  borderColor: theme.isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(221, 214, 254, 0.9)',
+                },
+              ]}
+            >
               <View style={styles.summaryTop}>
-                <Icon3D name="flame" bg="#6366F1" boxSize={36} size={17} />
-                <View
-                  style={[
-                    styles.summaryStatusChip,
-                    { backgroundColor: 'rgba(99,102,241,0.14)' },
-                  ]}
-                >
-                  <Text style={[styles.summaryStatusText, { color: '#6366F1' }]}>
-                    STREAK
+                <View style={[styles.glowIconContainer, { backgroundColor: 'rgba(99,102,241,0.18)', shadowColor: '#6366F1' }]}>
+                  <Ionicons name="flame" size={18} color="#6366F1" />
+                </View>
+                <View style={[styles.countdownRingPill, { backgroundColor: 'rgba(239,68,68,0.12)', borderColor: 'rgba(239,68,68,0.3)' }]}>
+                  <Ionicons name="flash" size={10} color="#EF4444" />
+                  <Text style={[styles.countdownRingText, { color: '#EF4444' }]}>
+                    {account.studyStreak >= 7 ? 'ON FIRE!' : 'STREAK'}
                   </Text>
                 </View>
               </View>
-              <Text style={[styles.summaryBigText, { color: theme.navy }]}>
-                {account.studyStreak}-Day Study Streak
-              </Text>
-              <Text
-                style={[styles.summarySubText, { color: theme.textSecondary }]}
-              >
-                Mode: {account.studyMode} · Best {account.longestStreak}d
+
+              <View style={styles.metricNumberRow}>
+                <Text style={[styles.metricBigNumber, { color: '#6366F1' }]}>
+                  {account.studyStreak}d
+                </Text>
+                <Text style={[styles.metricBigLabel, { color: theme.navy }]}>
+                  Study Streak
+                </Text>
+              </View>
+
+              <Text style={[styles.summarySubText, { color: theme.textSecondary }]} numberOfLines={1}>
+                Best record: {account.longestStreak}d · Mode: {account.studyMode}
               </Text>
             </DepthCard>
           </SmoothPressable>
@@ -454,37 +460,37 @@ export default function HomeScreen() {
           >
             {[
               {
-                label: t.actionAddSchedule,
+                label: 'Add Class',
                 icon: 'calendar' as const,
                 color: '#3B82F6',
                 href: '/calendar?action=new' as Href,
               },
               {
-                label: t.actionAddRequirement,
+                label: 'Add Task',
                 icon: 'checkbox' as const,
                 color: '#10B981',
                 href: '/requirements?action=new' as Href,
               },
               {
-                label: t.notesTab,
+                label: 'Quick Notes',
                 icon: 'create' as const,
                 color: '#8B5CF6',
                 href: '/calculator?tool=notes' as Href,
               },
               {
-                label: t.actionStudyFocus,
+                label: 'Pomodoro',
                 icon: 'timer' as const,
                 color: '#F59E0B',
                 href: '/(tabs)/study?mode=pomodoro' as Href,
               },
               {
-                label: t.actionTakeQuiz,
+                label: 'Take Quiz',
                 icon: 'ribbon' as const,
                 color: '#EC4899',
                 href: '/quiz?action=create' as Href,
               },
               {
-                label: t.actionCalculator,
+                label: 'Calculator',
                 icon: 'calculator' as const,
                 color: '#06B6D4',
                 href: '/calculator?tool=calculator' as Href,
@@ -494,20 +500,25 @@ export default function HomeScreen() {
                 key={qa.label}
                 onPress={() => router.push(qa.href)}
                 style={[
-                  styles.quickActionPill,
+                  styles.quickActionCard,
                   {
-                    backgroundColor: theme.card,
+                    backgroundColor: theme.surface,
                     borderColor: theme.border,
                   },
                 ]}
               >
-                <Icon3D
-                  name={qa.icon}
-                  bg={qa.color}
-                  boxSize={40}
-                  size={19}
-                  radius={14}
-                />
+                <View
+                  style={[
+                    styles.quickActionIconBubble,
+                    {
+                      backgroundColor: `${qa.color}15`,
+                      borderColor: `${qa.color}30`,
+                      shadowColor: qa.color,
+                    },
+                  ]}
+                >
+                  <Ionicons name={qa.icon} size={20} color={qa.color} />
+                </View>
                 <Text
                   numberOfLines={1}
                   style={[styles.quickActionLabel, { color: theme.navy }]}
@@ -530,7 +541,7 @@ export default function HomeScreen() {
             </View>
             <SmoothPressable onPress={() => router.push('/(tabs)/library' as Href)}>
               <Text style={[styles.seeAllText, { color: activeTheme.primary }]}>
-                Study Library
+                Study Library →
               </Text>
             </SmoothPressable>
           </View>
@@ -545,48 +556,52 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/library' as Href)}
               style={styles.continueCardPressable}
             >
-              <DepthCard variant="mini" style={styles.continueCard}>
-                <View style={styles.continueCardTop}>
-                  <View
-                    style={[
-                      styles.continueIconWrap,
-                      { backgroundColor: 'rgba(239, 68, 68, 0.14)' },
-                    ]}
-                  >
-                    <Ionicons name="document-text" size={19} color="#EF4444" />
-                  </View>
-                  <View
-                    style={[
-                      styles.continueTypePill,
-                      { backgroundColor: 'rgba(239, 68, 68, 0.1)' },
-                    ]}
-                  >
-                    <Text style={[styles.continueTypeText, { color: '#EF4444' }]}>
-                      PDF MATERIAL
+              <DepthCard variant="mini" style={styles.continueCardElevated}>
+                {/* Category Top Banner */}
+                <View
+                  style={[
+                    styles.continueCardBanner,
+                    { backgroundColor: 'rgba(239, 68, 68, 0.12)', borderBottomColor: 'rgba(239, 68, 68, 0.2)' },
+                  ]}
+                >
+                  <View style={styles.bannerBadgeRow}>
+                    <Ionicons name="document-text" size={13} color="#EF4444" />
+                    <Text style={[styles.bannerBadgeText, { color: '#EF4444' }]}>
+                      MATHEMATICS · PDF
                     </Text>
                   </View>
+                  <View style={[styles.continueMiniTag, { backgroundColor: 'rgba(239, 68, 68, 0.15)' }]}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#EF4444' }}>OFFLINE</Text>
+                  </View>
                 </View>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueTitle, { color: theme.navy }]}
-                >
-                  {account.uploadedFiles?.[0]?.title || 'Calculus Complete Syllabus'}
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueSub, { color: theme.textSecondary }]}
-                >
-                  Mathematics · Page {account.uploadedFiles?.[0]?.lastReadPage || 1}
-                </Text>
-                <View style={styles.continueBottomRow}>
+
+                <View style={styles.continueCardBody}>
                   <Text
-                    style={[
-                      styles.continueActionText,
-                      { color: activeTheme.primary },
-                    ]}
+                    numberOfLines={1}
+                    style={[styles.continueTitle, { color: theme.navy }]}
                   >
-                    {t.resumeReading}
+                    {account.uploadedFiles?.[0]?.title || 'Calculus Complete Syllabus'}
                   </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.continueSub, { color: theme.textSecondary }]}
+                  >
+                    Page {account.uploadedFiles?.[0]?.lastReadPage || 4} of 32 · 15% read
+                  </Text>
+
+                  {/* Slim Progress Bar */}
+                  <View style={[styles.progressBarTrack, { backgroundColor: 'rgba(239, 68, 68, 0.12)' }]}>
+                    <View style={[styles.progressBarFill, { width: '15%', backgroundColor: '#EF4444' }]} />
+                  </View>
+
+                  <View style={styles.continueBottomRow}>
+                    <View style={[styles.continuePillBtn, { backgroundColor: `${activeTheme.primary}18`, borderColor: `${activeTheme.primary}35` }]}>
+                      <Text style={[styles.continuePillBtnText, { color: activeTheme.primary }]}>
+                        Resume Reading
+                      </Text>
+                      <Ionicons name="arrow-forward" size={12} color={activeTheme.primary} />
+                    </View>
+                  </View>
                 </View>
               </DepthCard>
             </SmoothPressable>
@@ -596,48 +611,52 @@ export default function HomeScreen() {
               onPress={() => router.push('/(tabs)/study' as Href)}
               style={styles.continueCardPressable}
             >
-              <DepthCard variant="mini" style={styles.continueCard}>
-                <View style={styles.continueCardTop}>
-                  <View
-                    style={[
-                      styles.continueIconWrap,
-                      { backgroundColor: 'rgba(99, 102, 241, 0.14)' },
-                    ]}
-                  >
-                    <Ionicons name="copy" size={19} color="#6366F1" />
-                  </View>
-                  <View
-                    style={[
-                      styles.continueTypePill,
-                      { backgroundColor: 'rgba(99, 102, 241, 0.1)' },
-                    ]}
-                  >
-                    <Text style={[styles.continueTypeText, { color: '#6366F1' }]}>
-                      FLASHCARDS
+              <DepthCard variant="mini" style={styles.continueCardElevated}>
+                {/* Category Top Banner */}
+                <View
+                  style={[
+                    styles.continueCardBanner,
+                    { backgroundColor: 'rgba(99, 102, 241, 0.12)', borderBottomColor: 'rgba(99, 102, 241, 0.2)' },
+                  ]}
+                >
+                  <View style={styles.bannerBadgeRow}>
+                    <Ionicons name="copy" size={13} color="#6366F1" />
+                    <Text style={[styles.bannerBadgeText, { color: '#6366F1' }]}>
+                      ACTIVE RECALL · FLASHCARDS
                     </Text>
                   </View>
+                  <View style={[styles.continueMiniTag, { backgroundColor: 'rgba(99, 102, 241, 0.15)' }]}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#6366F1' }}>SPACED</Text>
+                  </View>
                 </View>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueTitle, { color: theme.navy }]}
-                >
-                  Calculus Derivatives Deck
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueSub, { color: theme.textSecondary }]}
-                >
-                  Mathematics · Active recall drills
-                </Text>
-                <View style={styles.continueBottomRow}>
+
+                <View style={styles.continueCardBody}>
                   <Text
-                    style={[
-                      styles.continueActionText,
-                      { color: activeTheme.primary },
-                    ]}
+                    numberOfLines={1}
+                    style={[styles.continueTitle, { color: theme.navy }]}
                   >
-                    Flip Cards →
+                    Calculus Derivatives Deck
                   </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.continueSub, { color: theme.textSecondary }]}
+                  >
+                    12 of 40 cards reviewed · 30%
+                  </Text>
+
+                  {/* Slim Progress Bar */}
+                  <View style={[styles.progressBarTrack, { backgroundColor: 'rgba(99, 102, 241, 0.12)' }]}>
+                    <View style={[styles.progressBarFill, { width: '30%', backgroundColor: '#6366F1' }]} />
+                  </View>
+
+                  <View style={styles.continueBottomRow}>
+                    <View style={[styles.continuePillBtn, { backgroundColor: 'rgba(99, 102, 241, 0.16)', borderColor: 'rgba(99, 102, 241, 0.35)' }]}>
+                      <Text style={[styles.continuePillBtnText, { color: '#6366F1' }]}>
+                        Flip Cards
+                      </Text>
+                      <Ionicons name="sparkles" size={12} color="#6366F1" />
+                    </View>
+                  </View>
                 </View>
               </DepthCard>
             </SmoothPressable>
@@ -647,48 +666,52 @@ export default function HomeScreen() {
               onPress={() => router.push('/quiz' as Href)}
               style={styles.continueCardPressable}
             >
-              <DepthCard variant="mini" style={styles.continueCard}>
-                <View style={styles.continueCardTop}>
-                  <View
-                    style={[
-                      styles.continueIconWrap,
-                      { backgroundColor: 'rgba(16, 185, 129, 0.14)' },
-                    ]}
-                  >
-                    <Ionicons name="ribbon" size={19} color="#10B981" />
-                  </View>
-                  <View
-                    style={[
-                      styles.continueTypePill,
-                      { backgroundColor: 'rgba(16, 185, 129, 0.1)' },
-                    ]}
-                  >
-                    <Text style={[styles.continueTypeText, { color: '#10B981' }]}>
-                      ADAPTIVE QUIZ
+              <DepthCard variant="mini" style={styles.continueCardElevated}>
+                {/* Category Top Banner */}
+                <View
+                  style={[
+                    styles.continueCardBanner,
+                    { backgroundColor: 'rgba(16, 185, 129, 0.12)', borderBottomColor: 'rgba(16, 185, 129, 0.2)' },
+                  ]}
+                >
+                  <View style={styles.bannerBadgeRow}>
+                    <Ionicons name="ribbon" size={13} color="#10B981" />
+                    <Text style={[styles.bannerBadgeText, { color: '#10B981' }]}>
+                      ADAPTIVE MASTERY QUIZ
                     </Text>
                   </View>
+                  <View style={[styles.continueMiniTag, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+                    <Text style={{ fontSize: 9, fontWeight: '800', color: '#10B981' }}>READY</Text>
+                  </View>
                 </View>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueTitle, { color: theme.navy }]}
-                >
-                  Science Cellular Energy
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={[styles.continueSub, { color: theme.textSecondary }]}
-                >
-                  Biology · 5 adaptive questions
-                </Text>
-                <View style={styles.continueBottomRow}>
+
+                <View style={styles.continueCardBody}>
                   <Text
-                    style={[
-                      styles.continueActionText,
-                      { color: activeTheme.primary },
-                    ]}
+                    numberOfLines={1}
+                    style={[styles.continueTitle, { color: theme.navy }]}
                   >
-                    Practice Now →
+                    Mechanics & Forces Quiz
                   </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={[styles.continueSub, { color: theme.textSecondary }]}
+                  >
+                    Physics · 8 of 10 problems done
+                  </Text>
+
+                  {/* Slim Progress Bar */}
+                  <View style={[styles.progressBarTrack, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+                    <View style={[styles.progressBarFill, { width: '80%', backgroundColor: '#10B981' }]} />
+                  </View>
+
+                  <View style={styles.continueBottomRow}>
+                    <View style={[styles.continuePillBtn, { backgroundColor: 'rgba(16, 185, 129, 0.16)', borderColor: 'rgba(16, 185, 129, 0.35)' }]}>
+                      <Text style={[styles.continuePillBtnText, { color: '#10B981' }]}>
+                        Resume Quiz
+                      </Text>
+                      <Ionicons name="play" size={12} color="#10B981" />
+                    </View>
+                  </View>
                 </View>
               </DepthCard>
             </SmoothPressable>
@@ -1110,6 +1133,27 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '600',
   },
+  headerGearButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.32,
+    shadowRadius: 10,
+    elevation: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  headerGearInnerGlow: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   langToggleBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1294,14 +1338,78 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   summaryCardInner: {
-    gap: 7,
-    minHeight: 114,
+    gap: 8,
+    minHeight: 126,
+    padding: 14,
+    borderRadius: 20,
+    borderWidth: 1,
     justifyContent: 'space-between',
   },
   summaryTop: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  glowIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  countdownRingPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  countdownRingText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  beaconDotWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  beaconDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#D97706',
+  },
+  beaconText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
+  },
+  metricNumberRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+    marginTop: 2,
+  },
+  metricBigNumber: {
+    fontSize: 22,
+    fontWeight: '900',
+    letterSpacing: -0.6,
+  },
+  metricBigLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: -0.2,
   },
   summaryStatusChip: {
     paddingHorizontal: 8,
@@ -1319,8 +1427,9 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
   },
   summarySubText: {
-    fontSize: 11.5,
-    lineHeight: 15,
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '600',
   },
   sectionBlock: {
     gap: 10,
@@ -1362,6 +1471,31 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 2,
   },
+  quickActionCard: {
+    width: 90,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+  },
+  quickActionIconBubble: {
+    width: 44,
+    height: 44,
+    borderRadius: 15,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   quickActionPill: {
     width: 86,
     paddingVertical: 12,
@@ -1372,7 +1506,7 @@ const styles = StyleSheet.create({
     gap: 7,
   },
   quickActionLabel: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
     textAlign: 'center',
   },
@@ -1381,7 +1515,65 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   continueCardPressable: {
-    width: 220,
+    width: 236,
+  },
+  continueCardElevated: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    padding: 0,
+    minHeight: 148,
+    justifyContent: 'space-between',
+    borderWidth: 1,
+  },
+  continueCardBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+  },
+  bannerBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  bannerBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  continueMiniTag: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
+  },
+  continueCardBody: {
+    padding: 12,
+    gap: 6,
+  },
+  progressBarTrack: {
+    height: 4,
+    borderRadius: 2,
+    overflow: 'hidden',
+    marginTop: 2,
+  },
+  progressBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  continuePillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  continuePillBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
   },
   continueCard: {
     padding: 14,

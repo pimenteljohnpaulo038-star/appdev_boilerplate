@@ -80,12 +80,18 @@ export function FloatingTabBar({ state, navigation }: TabBarProps) {
           styles.bar,
           {
             backgroundColor: theme.isDark
-              ? 'rgba(19, 28, 62, 0.94)'
-              : 'rgba(255, 255, 255, 0.94)',
+              ? 'rgba(15, 23, 42, 0.90)'
+              : 'rgba(255, 255, 255, 0.90)',
             borderColor: theme.isDark
-              ? 'rgba(99, 102, 241, 0.32)'
-              : 'rgba(226, 232, 240, 0.95)',
-            shadowColor: theme.isDark ? '#020617' : '#1E3A8A',
+              ? 'rgba(99, 102, 241, 0.35)'
+              : 'rgba(255, 255, 255, 0.85)',
+            shadowColor: theme.isDark ? '#020617' : '#64748B',
+            ...Platform.select({
+              web: {
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+              } as unknown as object,
+            }),
           },
         ]}
       >
@@ -110,12 +116,13 @@ export function FloatingTabBar({ state, navigation }: TabBarProps) {
                   style={[
                     styles.centerOrb,
                     {
-                      backgroundColor: activeTheme.primary,
-                      shadowColor: activeTheme.primary,
-                      transform: [{ translateY: focused ? -10 : -7 }],
+                      backgroundColor: '#8B5CF6',
+                      shadowColor: '#8B5CF6',
+                      transform: [{ translateY: focused ? -10 : -7 }, { scale: focused ? 1.05 : 1 }],
                       ...Platform.select({
                         web: {
-                          backgroundImage: `linear-gradient(135deg, ${activeTheme.primary} 0%, ${activeTheme.secondary} 100%)`,
+                          backgroundImage:
+                            'linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%)',
                         } as unknown as object,
                       }),
                     },
@@ -128,7 +135,7 @@ export function FloatingTabBar({ state, navigation }: TabBarProps) {
                   style={[
                     styles.centerLabel,
                     {
-                      color: focused ? activeTheme.primary : theme.textSecondary,
+                      color: focused ? '#8B5CF6' : theme.textSecondary,
                       fontWeight: focused ? '800' : '700',
                     },
                   ]}
@@ -219,9 +226,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingHorizontal: 6,
     shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 24,
-    elevation: 10,
+    shadowOpacity: 0.18,
+    shadowRadius: 28,
+    elevation: 12,
   },
   tabItem: {
     flex: 1,
@@ -243,10 +250,10 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
   activeIndicatorDot: {
-    width: 14,
+    width: 16,
     height: 3,
     borderRadius: 2,
-    marginTop: 1,
+    marginTop: 2,
   },
   centerItemWrap: {
     flex: 1.15,
@@ -261,11 +268,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.88)',
+    borderColor: 'rgba(255, 255, 255, 0.92)',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.38,
-    shadowRadius: 16,
-    elevation: 8,
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    elevation: 10,
     overflow: 'hidden',
   },
   centerOrbGloss: {

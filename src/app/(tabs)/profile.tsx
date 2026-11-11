@@ -5,7 +5,6 @@ import {
   Modal,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   View,
@@ -16,12 +15,9 @@ import { DepthCard, Icon3D } from '@/components/DepthUI';
 import { SmoothPressable } from '@/components/SmoothPressable';
 import { useOras } from '@/context/OrasContext';
 import {
-  ANIME_PRESET_AVATARS,
-  COLOR_THEMES,
+  ACADEMIC_ACHIEVEMENTS,
   PROFILE_TITLES,
-  STUDY_MODES,
   type StudentLevel,
-  type StudentPreferences,
 } from '@/data/orasorasData';
 import { useTheme } from '@/theme';
 import { confirmAction, showMessage } from '@/utils/confirm';
@@ -30,50 +26,6 @@ const STUDENT_LEVEL_OPTIONS: StudentLevel[] = [
   'Junior High School',
   'Senior High School',
   'College',
-];
-
-const PREFERENCE_TOGGLES: {
-  key: keyof StudentPreferences;
-  label: string;
-  desc: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-  color: string;
-}[] = [
-  {
-    key: 'classReminders',
-    label: 'Class Countdown Reminders',
-    desc: 'Notify 15 minutes before every scheduled class.',
-    icon: 'time',
-    color: '#3B82F6',
-  },
-  {
-    key: 'requirementAlerts',
-    label: 'Urgent Requirement Alerts',
-    desc: 'Warn when assignments approach or pass deadlines.',
-    icon: 'alert-circle',
-    color: '#F59E0B',
-  },
-  {
-    key: 'soundEffects',
-    label: 'Micro-Interaction Sound & Haptics',
-    desc: 'Subtle celebration feedback on quiz and timer completion.',
-    icon: 'volume-high',
-    color: '#6366F1',
-  },
-  {
-    key: 'dailyDigest',
-    label: 'Daily Study Plan Digest',
-    desc: 'Morning summary of today’s classes and weak topics.',
-    icon: 'sunny',
-    color: '#10B981',
-  },
-  {
-    key: 'autoSaveAI',
-    label: 'Auto-Save AI Reviewers Offline',
-    desc: 'Keep generated flashcards and summaries in local storage.',
-    icon: 'cloud-done',
-    color: '#06B6D4',
-  },
 ];
 
 export default function ProfileScreen() {
@@ -86,12 +38,7 @@ export default function ProfileScreen() {
     switchAccount,
     createAccount,
     updateAccount,
-    togglePreference,
-    selectPresetAvatar,
     logoutToOnboarding,
-    language,
-    t,
-    setLanguage,
   } = useOras();
 
   const [studioVisible, setStudioVisible] = useState(false);
@@ -100,22 +47,22 @@ export default function ProfileScreen() {
 
   // Edit Profile Modal state
   const [nameDraft, setNameDraft] = useState(account.name);
-  const [levelDraft, setLevelDraft] = useState<StudentLevel>(account.level);
-  const [customTitleDraft, setCustomTitleDraft] = useState(
-    account.profileTitle
+  const [usernameDraft, setUsernameDraft] = useState(account.username || 'alex_rivera');
+  const [schoolDraft, setSchoolDraft] = useState(
+    account.schoolName || 'Philippine Science High School'
   );
+  const [levelDraft, setLevelDraft] = useState<StudentLevel>(account.level);
+  const [customTitleDraft, setCustomTitleDraft] = useState(account.profileTitle);
 
   // New Account Modal state
   const [newAccName, setNewAccName] = useState('');
-  const [newAccLevel, setNewAccLevel] =
-    useState<StudentLevel>('College');
+  const [newAccLevel, setNewAccLevel] = useState<StudentLevel>('College');
 
   const avgScore = useMemo(() => {
     const qrs = account.quizResults || [];
     if (qrs.length === 0) return 91;
     return Math.round(
-      qrs.reduce((s, q) => s + q.scorePercent, 0) /
-        qrs.length
+      qrs.reduce((s, q) => s + q.scorePercent, 0) / qrs.length
     );
   }, [account.quizResults]);
 
@@ -127,6 +74,8 @@ export default function ProfileScreen() {
 
   const openEditProfile = () => {
     setNameDraft(account.name);
+    setUsernameDraft(account.username || 'alex_rivera');
+    setSchoolDraft(account.schoolName || 'Philippine Science High School');
     setLevelDraft(account.level);
     setCustomTitleDraft(account.profileTitle);
     setEditModalVisible(true);
@@ -135,6 +84,8 @@ export default function ProfileScreen() {
   const saveEditProfile = async () => {
     await updateAccount({
       name: nameDraft.trim() || 'Alex Rivera',
+      username: usernameDraft.trim().replace(/^@/, '') || 'alex_rivera',
+      schoolName: schoolDraft.trim() || 'Philippine Science High School',
       level: levelDraft,
       profileTitle: customTitleDraft.trim() || 'Focused Learner',
     });
@@ -181,7 +132,7 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. Hero Profile Banner with Large Anime Avatar, Level, Title & Stats */}
+        {/* 1. Hero Profile Banner with Anime Avatar, Identity, Stats & Actions */}
         <DepthCard
           variant="color"
           gradientColors={[activeTheme.primary, activeTheme.secondary]}
@@ -191,6 +142,7 @@ export default function ProfileScreen() {
             <SmoothPressable
               onPress={() => setAccountModalVisible(true)}
               style={styles.accountSwitchPill}
+              accessibilityLabel="Switch active account"
             >
               <Ionicons name="people" size={14} color="#FFFFFF" />
               <Text style={styles.accountSwitchText}>
@@ -230,6 +182,9 @@ export default function ProfileScreen() {
             </SmoothPressable>
 
             <Text style={styles.studentName}>{account.name}</Text>
+            <Text style={styles.studentUsername}>
+              @{account.username || 'alex_rivera'}
+            </Text>
 
             <View style={styles.badgesRow}>
               <View style={styles.titlePill}>
@@ -306,63 +261,234 @@ export default function ProfileScreen() {
           </View>
         </DepthCard>
 
-        {/* Lower Profile Customization Surface (Transforms into Deep Navy/Indigo in Dark Mode) */}
-        <View
-          style={[
-            styles.lowerCustomizationSurface,
-            {
-              backgroundColor: account.darkMode ? '#0D1430' : theme.background,
-              borderColor: account.darkMode
-                ? 'rgba(99, 102, 241, 0.28)'
-                : 'transparent',
-            },
-          ]}
-        >
-          {/* 2. Dark Mode & Appearance Toggle */}
-          <DepthCard variant="card" style={styles.darkCard}>
-            <View style={styles.prefRow}>
-              <Icon3D
-                name={account.darkMode ? 'moon' : 'sunny'}
-                bg={account.darkMode ? '#6366F1' : '#F59E0B'}
-                boxSize={42}
-                size={20}
-              />
-              <View style={styles.flex}>
-                <Text style={[styles.cardHeading, { color: theme.navy }]}>
-                  Deep Navy & Indigo Dark Mode
-                </Text>
-                <Text
-                  style={[styles.cardSub, { color: theme.textSecondary }]}
-                >
-                  Transforms surfaces & bottom navigation while preserving
-                  vivid accents.
-                </Text>
-              </View>
-              <Switch
-                value={account.darkMode}
-                onValueChange={(val) => void updateAccount({ darkMode: val })}
-                trackColor={{ false: '#CBD5E1', true: activeTheme.primary }}
-              />
-            </View>
-          </DepthCard>
-
-          {/* App Language Selector (English & Filipino / Tagalog) */}
+        {/* Lower Profile Surface — Focused purely on Identity, Progress & Achievements */}
+        <View style={styles.lowerCustomizationSurface}>
+          {/* 1. Student Identity & Credentials */}
           <DepthCard variant="card" style={{ gap: 12 }}>
             <View style={styles.rowBetween}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                <Icon3D name="language" bg="#06B6D4" boxSize={40} size={20} radius={12} />
+                <Icon3D name="id-card" bg={activeTheme.primary} boxSize={38} size={18} />
                 <View>
                   <Text style={[styles.cardHeading, { color: theme.navy }]}>
-                    {t.appLanguage}
+                    Student Identity & Credentials
                   </Text>
                   <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
-                    {t.selectLanguage}
+                    Verified offline student account
+                  </Text>
+                </View>
+              </View>
+              <SmoothPressable
+                onPress={openEditProfile}
+                style={[
+                  styles.smallEditBadge,
+                  {
+                    backgroundColor: `${activeTheme.primary}18`,
+                    borderColor: `${activeTheme.primary}35`,
+                  },
+                ]}
+              >
+                <Ionicons name="pencil" size={12} color={activeTheme.primary} />
+                <Text style={{ fontSize: 11, fontWeight: '800', color: activeTheme.primary }}>
+                  Edit
+                </Text>
+              </SmoothPressable>
+            </View>
+
+            <View style={styles.credentialGrid}>
+              <View
+                style={[
+                  styles.credentialItem,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                  USERNAME
+                </Text>
+                <Text
+                  style={[styles.credentialValue, { color: theme.navy }]}
+                  numberOfLines={1}
+                >
+                  @{account.username || 'alex_rivera'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.credentialItem,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                  STUDENT ID
+                </Text>
+                <Text
+                  style={[styles.credentialValue, { color: theme.navy }]}
+                  numberOfLines={1}
+                >
+                  ORA-2026-
+                  {account.name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'STD'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.credentialItem,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                  INSTITUTION
+                </Text>
+                <Text
+                  style={[styles.credentialValue, { color: theme.navy }]}
+                  numberOfLines={1}
+                >
+                  {account.schoolName || 'Philippine Science High School'}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.credentialItem,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                  ACADEMIC LEVEL
+                </Text>
+                <Text
+                  style={[styles.credentialValue, { color: theme.navy }]}
+                  numberOfLines={1}
+                >
+                  {account.level}
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.credentialItemFull,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Text style={[styles.credentialLabel, { color: theme.textSecondary }]}>
+                    SCHOLAR STATUS
+                  </Text>
+                  <View style={styles.verifiedPill}>
+                    <Ionicons name="checkmark-circle" size={13} color="#10B981" />
+                    <Text style={styles.verifiedPillText}>Offline Synchronized</Text>
+                  </View>
+                </View>
+                <Text style={[styles.credentialValue, { color: theme.navy, marginTop: 4 }]}>
+                  Active Scholar · Good Academic Standing · Local Database Active
+                </Text>
+              </View>
+            </View>
+          </DepthCard>
+
+          {/* 2. Academic Focus & Statistics Overview */}
+          <DepthCard variant="card" style={{ gap: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon3D name="bar-chart" bg="#10B981" boxSize={38} size={18} />
+                <View>
+                  <Text style={[styles.cardHeading, { color: theme.navy }]}>
+                    Academic Statistics & Focus
+                  </Text>
+                  <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Progress tracked across modules and timers
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            <View style={styles.statsSummaryGrid}>
+              <View
+                style={[
+                  styles.statBox,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Ionicons name="flame" size={20} color="#EF4444" />
+                <Text style={[styles.statBoxNum, { color: theme.navy }]}>
+                  {account.studyStreak} Days
+                </Text>
+                <Text style={[styles.statBoxTitle, { color: theme.textSecondary }]}>
+                  Study Streak
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statBox,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Ionicons name="time" size={20} color="#3B82F6" />
+                <Text style={[styles.statBoxNum, { color: theme.navy }]}>
+                  {(totalMins / 60).toFixed(1)} Hours
+                </Text>
+                <Text style={[styles.statBoxTitle, { color: theme.textSecondary }]}>
+                  Total Focus Time
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statBox,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Ionicons name="trophy" size={20} color="#F59E0B" />
+                <Text style={[styles.statBoxNum, { color: theme.navy }]}>
+                  {avgScore}%
+                </Text>
+                <Text style={[styles.statBoxTitle, { color: theme.textSecondary }]}>
+                  Quiz Accuracy
+                </Text>
+              </View>
+
+              <View
+                style={[
+                  styles.statBox,
+                  { backgroundColor: theme.surface, borderColor: theme.border },
+                ]}
+              >
+                <Ionicons name="checkmark-done-circle" size={20} color="#10B981" />
+                <Text style={[styles.statBoxNum, { color: theme.navy }]}>
+                  {account.requirements.filter((r) => r.completed).length}/
+                  {account.requirements.length}
+                </Text>
+                <Text style={[styles.statBoxTitle, { color: theme.textSecondary }]}>
+                  Completed Tasks
+                </Text>
+              </View>
+            </View>
+          </DepthCard>
+
+          {/* 3. Badges & Achievements Showcase */}
+          <DepthCard variant="card" style={{ gap: 12 }}>
+            <View style={styles.rowBetween}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon3D name="ribbon" bg="#F59E0B" boxSize={38} size={18} />
+                <View>
+                  <Text style={[styles.cardHeading, { color: theme.navy }]}>
+                    Badges & Achievements
+                  </Text>
+                  <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Earned through consistent academic milestones
                   </Text>
                 </View>
               </View>
               <View
                 style={[
-                  styles.langCurrentBadge,
+                  styles.badgeCountPill,
                   { backgroundColor: `${activeTheme.primary}18` },
                 ]}
               >
@@ -373,308 +499,116 @@ export default function ProfileScreen() {
                     color: activeTheme.primary,
                   }}
                 >
-                  {language === 'fil' ? 'FILIPINO' : 'ENGLISH'}
+                  {(account.unlockedAchievementIds || []).length}/
+                  {ACADEMIC_ACHIEVEMENTS.length}
                 </Text>
               </View>
             </View>
 
-            <View style={styles.langButtonsRow}>
-              <SmoothPressable
-                onPress={() => void setLanguage('en')}
-                style={[
-                  styles.langOptionCard,
-                  {
-                    borderColor:
-                      language === 'en' ? activeTheme.primary : theme.border,
-                    backgroundColor:
-                      language === 'en'
-                        ? `${activeTheme.primary}14`
-                        : theme.surface,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={language === 'en' ? 'radio-button-on' : 'radio-button-off'}
-                  size={16}
-                  color={language === 'en' ? activeTheme.primary : theme.textMuted}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.langOptionTitle, { color: theme.navy }]}>
-                    English
-                  </Text>
-                  <Text
-                    style={[styles.langOptionDesc, { color: theme.textSecondary }]}
-                  >
-                    Standard Academic English
-                  </Text>
-                </View>
-              </SmoothPressable>
-
-              <SmoothPressable
-                onPress={() => void setLanguage('fil')}
-                style={[
-                  styles.langOptionCard,
-                  {
-                    borderColor:
-                      language === 'fil' ? activeTheme.primary : theme.border,
-                    backgroundColor:
-                      language === 'fil'
-                        ? `${activeTheme.primary}14`
-                        : theme.surface,
-                  },
-                ]}
-              >
-                <Ionicons
-                  name={language === 'fil' ? 'radio-button-on' : 'radio-button-off'}
-                  size={16}
-                  color={language === 'fil' ? activeTheme.primary : theme.textMuted}
-                />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.langOptionTitle, { color: theme.navy }]}>
-                    Filipino
-                  </Text>
-                  <Text
-                    style={[styles.langOptionDesc, { color: theme.textSecondary }]}
-                  >
-                    Wikang Pambansa / Tagalog
-                  </Text>
-                </View>
-              </SmoothPressable>
-            </View>
-          </DepthCard>
-
-          {/* 3. 12 Color Themes Selector */}
-          <DepthCard variant="card" style={{ gap: 10 }}>
-            <View style={styles.rowBetween}>
-              <Text style={[styles.cardHeading, { color: theme.navy }]}>
-                12 Academic Color Themes
-              </Text>
-              <Text
-                style={[
-                  styles.activeBadgeText,
-                  { color: activeTheme.primary },
-                ]}
-              >
-                {activeTheme.name}
-              </Text>
-            </View>
-
-            <View style={styles.themesGrid}>
-              {COLOR_THEMES.map((t) => {
-                const selected = account.themeId === t.id;
+            <View style={styles.achievementsRowWrap}>
+              {ACADEMIC_ACHIEVEMENTS.map((ach) => {
+                const unlocked = (account.unlockedAchievementIds || []).includes(
+                  ach.id
+                );
                 return (
-                  <SmoothPressable
-                    key={t.id}
-                    onPress={() => void updateAccount({ themeId: t.id })}
+                  <View
+                    key={ach.id}
                     style={[
-                      styles.themeOption,
+                      styles.achievementCard,
                       {
                         backgroundColor: theme.surface,
-                        borderColor: selected ? t.primary : theme.border,
-                        borderWidth: selected ? 2 : 1,
+                        borderColor: unlocked ? ach.color : theme.border,
+                        opacity: unlocked ? 1 : 0.45,
                       },
+                      unlocked && { borderWidth: 1.5 },
                     ]}
                   >
                     <View
                       style={[
-                        styles.themeSwatch,
-                        { backgroundColor: t.primary },
+                        styles.achIconBubble,
+                        { backgroundColor: `${ach.color}20` },
                       ]}
-                    />
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.themeName, { color: theme.navy }]}
                     >
-                      {t.name}
-                    </Text>
-                  </SmoothPressable>
+                      <Ionicons
+                        name={ach.icon as any}
+                        size={18}
+                        color={ach.color}
+                      />
+                    </View>
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={[styles.achTitle, { color: theme.navy }]}
+                        numberOfLines={1}
+                      >
+                        {ach.title}
+                      </Text>
+                      <Text
+                        style={[styles.achDesc, { color: theme.textSecondary }]}
+                        numberOfLines={2}
+                      >
+                        {ach.description}
+                      </Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.achXpBadge,
+                        { backgroundColor: `${ach.color}18` },
+                      ]}
+                    >
+                      <Text style={[styles.achXpText, { color: ach.color }]}>
+                        +{ach.xpReward} XP
+                      </Text>
+                    </View>
+                  </View>
                 );
               })}
             </View>
           </DepthCard>
 
-          {/* 4. 12 Anime Preset Avatars + Custom Avatar Studio Launcher */}
+          {/* 4. Settings & Account Entry Banner */}
           <DepthCard variant="card" style={{ gap: 10 }}>
             <View style={styles.rowBetween}>
-              <Text style={[styles.cardHeading, { color: theme.navy }]}>
-                12 Anime Preset Avatars
-              </Text>
-              <SmoothPressable onPress={() => setStudioVisible(true)}>
-                <Text
-                  style={[
-                    styles.activeBadgeText,
-                    { color: activeTheme.primary },
-                  ]}
-                >
-                  Custom Studio →
-                </Text>
-              </SmoothPressable>
-            </View>
-
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.avatarsRow}
-            >
-              {ANIME_PRESET_AVATARS.map((av) => {
-                const selected =
-                  !account.useCustomAvatar &&
-                  account.presetAvatarId === av.id;
-                return (
-                  <SmoothPressable
-                    key={av.id}
-                    onPress={() => void selectPresetAvatar(av.id)}
-                    style={[
-                      styles.presetAvatarCard,
-                      {
-                        backgroundColor: theme.surface,
-                        borderColor: selected
-                          ? activeTheme.primary
-                          : theme.border,
-                        borderWidth: selected ? 2 : 1,
-                      },
-                    ]}
-                  >
-                    <UserAvatar avatarId={av.id} size={56} />
-                    <Text
-                      style={[
-                        styles.presetAvatarName,
-                        { color: theme.navy },
-                      ]}
-                    >
-                      {av.name}
-                    </Text>
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.presetAvatarTitle,
-                        { color: theme.textMuted },
-                      ]}
-                    >
-                      {av.title}
-                    </Text>
-                  </SmoothPressable>
-                );
-              })}
-            </ScrollView>
-          </DepthCard>
-
-          {/* 5. Profile Title & Study Mode Selectors */}
-          <DepthCard variant="card" style={{ gap: 12 }}>
-            <Text style={[styles.cardHeading, { color: theme.navy }]}>
-              Scholar Profile Title
-            </Text>
-            <View style={styles.wrapChips}>
-              {PROFILE_TITLES.map((pt) => {
-                const selected = account.profileTitle === pt;
-                return (
-                  <SmoothPressable
-                    key={pt}
-                    onPress={() => void updateAccount({ profileTitle: pt })}
-                    style={[
-                      styles.titleChip,
-                      {
-                        backgroundColor: selected
-                          ? activeTheme.primary
-                          : theme.surface,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.titleChipText,
-                        { color: selected ? '#FFFFFF' : theme.navy },
-                      ]}
-                    >
-                      {pt}
-                    </Text>
-                  </SmoothPressable>
-                );
-              })}
-            </View>
-
-            <Text
-              style={[
-                styles.cardHeading,
-                { color: theme.navy, marginTop: 4 },
-              ]}
-            >
-              Preferred Study Mode
-            </Text>
-            <View style={styles.wrapChips}>
-              {STUDY_MODES.map((sm) => {
-                const selected = account.studyMode === sm.id;
-                return (
-                  <SmoothPressable
-                    key={sm.id}
-                    onPress={() => void updateAccount({ studyMode: sm.id })}
-                    style={[
-                      styles.titleChip,
-                      {
-                        backgroundColor: selected
-                          ? '#10B981'
-                          : theme.surface,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.titleChipText,
-                        { color: selected ? '#FFFFFF' : theme.navy },
-                      ]}
-                    >
-                      {sm.label} ({sm.focusMin}m)
-                    </Text>
-                  </SmoothPressable>
-                );
-              })}
-            </View>
-          </DepthCard>
-
-          {/* 6. Five Account-Specific Preference Toggles */}
-          <DepthCard variant="card" style={{ gap: 12 }}>
-            <Text style={[styles.cardHeading, { color: theme.navy }]}>
-              Notifications & Study Preferences
-            </Text>
-
-            {PREFERENCE_TOGGLES.map((pref) => (
-              <View key={pref.key} style={styles.prefRow}>
-                <Icon3D
-                  name={pref.icon}
-                  bg={pref.color}
-                  boxSize={36}
-                  size={17}
-                />
-                <View style={styles.flex}>
-                  <Text style={[styles.prefTitle, { color: theme.navy }]}>
-                    {pref.label}
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Icon3D name="settings" bg="#06B6D4" boxSize={38} size={18} />
+                <View>
+                  <Text style={[styles.cardHeading, { color: theme.navy }]}>
+                    Settings & Account Center
                   </Text>
-                  <Text
-                    style={[styles.prefDesc, { color: theme.textSecondary }]}
-                  >
-                    {pref.desc}
+                  <Text style={[styles.cardSub, { color: theme.textSecondary }]}>
+                    Preferences, Themes, Language & Avatars
                   </Text>
                 </View>
-                <Switch
-                  value={Boolean(account.preferences?.[pref.key])}
-                  onValueChange={() => void togglePreference(pref.key)}
-                  trackColor={{ false: '#CBD5E1', true: activeTheme.primary }}
-                />
               </View>
-            ))}
+            </View>
+
+            <Text style={{ fontSize: 12.5, color: theme.textSecondary, lineHeight: 18 }}>
+              Manage App Language (EN/FIL), 12 Academic Themes, 12 Anime Avatars, Notifications, Pomodoro durations, and account security inside Settings.
+            </Text>
+
+            <SmoothPressable
+              onPress={() => router.push('/settings' as Href)}
+              style={[
+                styles.openSettingsBtn,
+                { backgroundColor: activeTheme.primary },
+              ]}
+            >
+              <Ionicons name="settings-sharp" size={16} color="#FFFFFF" />
+              <Text style={styles.openSettingsBtnText}>Open Settings & Account</Text>
+              <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
+            </SmoothPressable>
           </DepthCard>
 
-          {/* 7. Multi-Account Switcher, Data & Storage Controls, and Logout */}
+          {/* 5. Account Switcher & Logout */}
           <DepthCard variant="card" style={{ gap: 10 }}>
             <Text style={[styles.cardHeading, { color: theme.navy }]}>
-              Accounts, Offline Storage & Backup
+              Account Management
             </Text>
 
             <SmoothPressable
               onPress={() => setAccountModalVisible(true)}
               style={[
                 styles.menuRowBtn,
-                { backgroundColor: theme.surface },
+                { backgroundColor: theme.surface, borderColor: theme.border, borderWidth: 1 },
               ]}
             >
               <Icon3D
@@ -693,41 +627,7 @@ export default function ProfileScreen() {
                     { color: theme.textSecondary },
                   ]}
                 >
-                  {accounts.length} local profiles with separate schedules &
-                  progress
-                </Text>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={18}
-                color={theme.textMuted}
-              />
-            </SmoothPressable>
-
-            <SmoothPressable
-              onPress={() => router.push('/settings' as Href)}
-              style={[
-                styles.menuRowBtn,
-                { backgroundColor: theme.surface },
-              ]}
-            >
-              <Icon3D
-                name="cloud-upload"
-                bg="#10B981"
-                boxSize={36}
-                size={17}
-              />
-              <View style={styles.flex}>
-                <Text style={[styles.menuRowTitle, { color: theme.navy }]}>
-                  Data, Backup & Offline Storage Controls
-                </Text>
-                <Text
-                  style={[
-                    styles.menuRowSub,
-                    { color: theme.textSecondary },
-                  ]}
-                >
-                  Export JSON backup, restore data, or manage AI settings
+                  {accounts.length} local profiles with separate schedules & progress
                 </Text>
               </View>
               <Ionicons
@@ -775,75 +675,158 @@ export default function ProfileScreen() {
               </SmoothPressable>
             </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: theme.navy }]}>
-                STUDENT NAME
-              </Text>
-              <TextInput
-                value={nameDraft}
-                onChangeText={setNameDraft}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.navy,
-                  },
-                ]}
-              />
-            </View>
+            <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+              <View style={{ gap: 12 }}>
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    STUDENT NAME
+                  </Text>
+                  <TextInput
+                    value={nameDraft}
+                    onChangeText={setNameDraft}
+                    placeholder="Student full name"
+                    placeholderTextColor={theme.textMuted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        color: theme.navy,
+                      },
+                    ]}
+                  />
+                </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: theme.navy }]}>
-                CUSTOM PROFILE TITLE
-              </Text>
-              <TextInput
-                value={customTitleDraft}
-                onChangeText={setCustomTitleDraft}
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.navy,
-                  },
-                ]}
-              />
-            </View>
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    USERNAME
+                  </Text>
+                  <TextInput
+                    value={usernameDraft}
+                    onChangeText={setUsernameDraft}
+                    placeholder="e.g. alex_rivera"
+                    placeholderTextColor={theme.textMuted}
+                    autoCapitalize="none"
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        color: theme.navy,
+                      },
+                    ]}
+                  />
+                </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={[styles.fieldLabel, { color: theme.navy }]}>
-                STUDENT LEVEL
-              </Text>
-              <View style={styles.wrapChips}>
-                {STUDENT_LEVEL_OPTIONS.map((lvl) => {
-                  const selected = levelDraft === lvl;
-                  return (
-                    <SmoothPressable
-                      key={lvl}
-                      onPress={() => setLevelDraft(lvl)}
-                      style={[
-                        styles.titleChip,
-                        {
-                          backgroundColor: selected
-                            ? activeTheme.primary
-                            : theme.surface,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.titleChipText,
-                          { color: selected ? '#FFFFFF' : theme.navy },
-                        ]}
-                      >
-                        {lvl}
-                      </Text>
-                    </SmoothPressable>
-                  );
-                })}
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    INSTITUTION / CAMPUS
+                  </Text>
+                  <TextInput
+                    value={schoolDraft}
+                    onChangeText={setSchoolDraft}
+                    placeholder="School or University"
+                    placeholderTextColor={theme.textMuted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        color: theme.navy,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    CUSTOM PROFILE TITLE
+                  </Text>
+                  <TextInput
+                    value={customTitleDraft}
+                    onChangeText={setCustomTitleDraft}
+                    placeholder="e.g. Focused Learner"
+                    placeholderTextColor={theme.textMuted}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: theme.surface,
+                        borderColor: theme.border,
+                        color: theme.navy,
+                      },
+                    ]}
+                  />
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    QUICK TITLES
+                  </Text>
+                  <View style={styles.wrapChips}>
+                    {PROFILE_TITLES.map((pt) => {
+                      const selected = customTitleDraft === pt;
+                      return (
+                        <SmoothPressable
+                          key={pt}
+                          onPress={() => setCustomTitleDraft(pt)}
+                          style={[
+                            styles.titleChip,
+                            {
+                              backgroundColor: selected
+                                ? activeTheme.primary
+                                : theme.surface,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.titleChipText,
+                              { color: selected ? '#FFFFFF' : theme.navy },
+                            ]}
+                          >
+                            {pt}
+                          </Text>
+                        </SmoothPressable>
+                      );
+                    })}
+                  </View>
+                </View>
+
+                <View style={styles.fieldGroup}>
+                  <Text style={[styles.fieldLabel, { color: theme.navy }]}>
+                    STUDENT LEVEL
+                  </Text>
+                  <View style={styles.wrapChips}>
+                    {STUDENT_LEVEL_OPTIONS.map((lvl) => {
+                      const selected = levelDraft === lvl;
+                      return (
+                        <SmoothPressable
+                          key={lvl}
+                          onPress={() => setLevelDraft(lvl)}
+                          style={[
+                            styles.titleChip,
+                            {
+                              backgroundColor: selected
+                                ? activeTheme.primary
+                                : theme.surface,
+                            },
+                          ]}
+                        >
+                          <Text
+                            style={[
+                              styles.titleChipText,
+                              { color: selected ? '#FFFFFF' : theme.navy },
+                            ]}
+                          >
+                            {lvl}
+                          </Text>
+                        </SmoothPressable>
+                      );
+                    })}
+                  </View>
+                </View>
               </View>
-            </View>
+            </ScrollView>
 
             <SmoothPressable
               onPress={() => void saveEditProfile()}
@@ -1049,13 +1032,19 @@ const styles = StyleSheet.create({
   },
   avatarCenterBlock: {
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   studentName: {
     color: '#FFFFFF',
     fontSize: 22,
     fontWeight: '900',
     letterSpacing: -0.5,
+  },
+  studentUsername: {
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 12.5,
+    fontWeight: '700',
+    marginBottom: 2,
   },
   badgesRow: {
     flexDirection: 'row',
@@ -1155,9 +1144,6 @@ const styles = StyleSheet.create({
     borderRadius: 26,
     gap: 14,
   },
-  darkCard: {
-    padding: 16,
-  },
   rowBetween: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1171,82 +1157,132 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     marginTop: 2,
   },
-  activeBadgeText: {
-    fontSize: 12,
-    fontWeight: '800',
+  smallEditBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
   },
-  themesGrid: {
+  credentialGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
   },
-  themeOption: {
-    width: '31%',
+  credentialItem: {
+    width: '48.5%',
     flexGrow: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 7,
-    paddingHorizontal: 9,
-    paddingVertical: 9,
-    borderRadius: 12,
-  },
-  themeSwatch: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-  },
-  themeName: {
-    fontSize: 11,
-    fontWeight: '700',
-    flex: 1,
-  },
-  avatarsRow: {
-    gap: 10,
-    paddingVertical: 2,
-  },
-  presetAvatarCard: {
-    width: 92,
-    paddingVertical: 10,
-    paddingHorizontal: 6,
-    borderRadius: 16,
-    alignItems: 'center',
+    padding: 11,
+    borderRadius: 14,
+    borderWidth: 1,
     gap: 3,
   },
-  presetAvatarName: {
+  credentialItemFull: {
+    width: '100%',
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  credentialLabel: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  credentialValue: {
     fontSize: 12.5,
     fontWeight: '800',
-    marginTop: 2,
   },
-  presetAvatarTitle: {
-    fontSize: 9.5,
-    fontWeight: '600',
-  },
-  wrapChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 7,
-  },
-  titleChip: {
-    paddingHorizontal: 11,
-    paddingVertical: 7,
-    borderRadius: 10,
-  },
-  titleChipText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-  },
-  prefRow: {
+  verifiedPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 4,
+    backgroundColor: 'rgba(16,185,129,0.12)',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 6,
   },
-  prefTitle: {
-    fontSize: 13.5,
+  verifiedPillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#10B981',
+  },
+  statsSummaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statBox: {
+    width: '48.5%',
+    flexGrow: 1,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    gap: 4,
+  },
+  statBoxNum: {
+    fontSize: 15,
+    fontWeight: '900',
+  },
+  statBoxTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  badgeCountPill: {
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  achievementsRowWrap: {
+    gap: 8,
+  },
+  achievementCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+  },
+  achIconBubble: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  achTitle: {
+    fontSize: 12.5,
     fontWeight: '800',
   },
-  prefDesc: {
-    fontSize: 11.5,
+  achDesc: {
+    fontSize: 10.5,
     marginTop: 1,
+  },
+  achXpBadge: {
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  achXpText: {
+    fontSize: 10,
+    fontWeight: '800',
+  },
+  openSettingsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    minHeight: 44,
+    borderRadius: 13,
+    marginTop: 4,
+  },
+  openSettingsBtnText: {
+    color: '#FFFFFF',
+    fontSize: 13.5,
+    fontWeight: '800',
   },
   menuRowBtn: {
     flexDirection: 'row',
@@ -1312,6 +1348,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
   },
+  wrapChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 7,
+  },
+  titleChip: {
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    borderRadius: 10,
+  },
+  titleChipText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+  },
   saveModalBtn: {
     minHeight: 46,
     borderRadius: 14,
@@ -1319,7 +1369,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 7,
-    marginTop: 4,
+    marginTop: 8,
   },
   saveModalBtnText: {
     color: '#FFFFFF',
@@ -1344,31 +1394,5 @@ const styles = StyleSheet.create({
   dividerLine: {
     height: 1,
     marginVertical: 2,
-  },
-  langCurrentBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  langButtonsRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  langOptionCard: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 12,
-    borderRadius: 14,
-    borderWidth: 1.5,
-  },
-  langOptionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-  },
-  langOptionDesc: {
-    fontSize: 10.5,
-    marginTop: 1,
   },
 });
