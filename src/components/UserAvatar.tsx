@@ -1,11 +1,13 @@
 import React from 'react';
-import { type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
+import { Image, type StyleProp, StyleSheet, View, type ViewStyle } from 'react-native';
 import { AnimeAvatar } from '@/components/AnimeAvatar';
 import { useOras } from '@/context/OrasContext';
 import {
   ANIME_PRESET_AVATARS,
   type CustomAvatarConfig,
 } from '@/data/orasorasData';
+
+const OFFICIAL_AVATAR = require('../../assets/images/avatar.jpg');
 
 export interface UserAvatarProps {
   /** Explicit preset avatar ID (0..11). Defaults to current active student account's preset */
@@ -24,6 +26,8 @@ export interface UserAvatarProps {
   showBorder?: boolean;
   /** Color of the circular border rim. Defaults to crisp semi-translucent white */
   borderColor?: string;
+  /** Whether to render the official 2D student vector avatar with dark navy background */
+  useOfficialAvatar?: boolean;
 }
 
 /**
@@ -48,6 +52,7 @@ export function UserAvatar({
   bgColors,
   showBorder = true,
   borderColor,
+  useOfficialAvatar,
 }: UserAvatarProps) {
   const { account, activeTheme } = useOras();
 
@@ -95,6 +100,37 @@ export function UserAvatar({
     showBorder === false
       ? 'transparent'
       : borderColor ?? 'rgba(255, 255, 255, 0.85)';
+
+  const shouldShowOfficial =
+    useOfficialAvatar !== undefined
+      ? useOfficialAvatar
+      : account?.useOfficialAvatar ?? false;
+
+  if (shouldShowOfficial) {
+    return (
+      <View
+        style={[
+          styles.container,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            overflow: 'hidden',
+            borderWidth: showBorder ? 2 : 0,
+            borderColor: resolvedBorderColor,
+            backgroundColor: '#0F172A',
+          },
+          style,
+        ]}
+      >
+        <Image
+          source={OFFICIAL_AVATAR}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, style]}>

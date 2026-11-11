@@ -42,7 +42,7 @@ export const DEFAULT_SETTINGS: Settings = {
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   nickname: '',
   onboarded: false,
-  theme: 'light',
+  theme: 'dark',
 };
 
 export async function loadSettings(): Promise<Settings> {
@@ -70,7 +70,7 @@ export async function loadSettings(): Promise<Settings> {
     systemPrompt: systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
     nickname: nickname ?? '',
     onboarded: onboarded === 'true',
-    theme: theme === 'dark' ? 'dark' : 'light',
+    theme: theme === 'light' ? 'light' : 'dark',
   };
 }
 

@@ -74,6 +74,7 @@ export default function SettingsScreen() {
     togglePreference,
     saveCustomAvatar,
     selectPresetAvatar,
+    selectOfficialAvatar,
   } = useOras();
   const { settings, update: updateSetting, reset: resetBaseSettings } = useSettings();
 
@@ -171,6 +172,7 @@ export default function SettingsScreen() {
             theme={theme}
             selectPresetAvatar={selectPresetAvatar}
             saveCustomAvatar={saveCustomAvatar}
+            selectOfficialAvatar={selectOfficialAvatar}
           />
         )}
 
@@ -556,12 +558,14 @@ function ProfileAvatarSection({
   theme,
   selectPresetAvatar,
   saveCustomAvatar,
+  selectOfficialAvatar,
 }: {
   account: ReturnType<typeof useOras>['account'];
   activeTheme: ReturnType<typeof useOras>['activeTheme'];
   theme: ReturnType<typeof useTheme>;
   selectPresetAvatar: ReturnType<typeof useOras>['selectPresetAvatar'];
   saveCustomAvatar: ReturnType<typeof useOras>['saveCustomAvatar'];
+  selectOfficialAvatar: ReturnType<typeof useOras>['selectOfficialAvatar'];
 }) {
   const [tab, setTab] = useState<'presets' | 'studio'>('presets');
   const [draft, setDraft] = useState<CustomAvatarConfig>(account.customAvatar);
@@ -593,6 +597,38 @@ function ProfileAvatarSection({
         <Text style={[styles.infoBannerText, { color: theme.text }]}>
           Built-in Anime Avatars & Custom Studio only. Camera & image uploads are disabled for privacy and offline integrity.
         </Text>
+      </View>
+
+      {/* Featured: Official 2D Vector Student Avatar */}
+      <View style={[styles.formCard, { backgroundColor: theme.surface, borderColor: account.useOfficialAvatar ? activeTheme.primary : theme.border, borderWidth: account.useOfficialAvatar ? 2 : 1, marginBottom: 16 }]}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+          <UserAvatar size={66} useOfficialAvatar />
+          <View style={{ flex: 1, gap: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: theme.navy }}>Official Student Avatar</Text>
+              {account.useOfficialAvatar && (
+                <View style={{ backgroundColor: activeTheme.primary, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                  <Text style={{ color: '#FFFFFF', fontSize: 10, fontWeight: '700' }}>ACTIVE</Text>
+                </View>
+              )}
+            </View>
+            <Text style={{ fontSize: 12, color: theme.textSecondary }}>
+              2D vector portrait with dark navy circular frame and formal uniform.
+            </Text>
+          </View>
+        </View>
+        {!account.useOfficialAvatar && (
+          <SmoothPressable
+            onPress={async () => {
+              await selectOfficialAvatar();
+              showMessage('Avatar Selected', 'Official 2D student avatar with dark navy background is now active.');
+            }}
+            style={[styles.primaryActionBtn, { backgroundColor: activeTheme.primary, marginTop: 12 }]}
+          >
+            <Ionicons name="checkmark-circle-outline" size={16} color="#FFFFFF" />
+            <Text style={styles.primaryActionBtnText}>Set as Active Avatar</Text>
+          </SmoothPressable>
+        )}
       </View>
 
       {/* Tabs */}

@@ -91,6 +91,7 @@ interface OrasContextValue {
   saveCustomAvatar: (config: CustomAvatarConfig) => Promise<void>;
   /** Select one of the 12 preset anime avatars */
   selectPresetAvatar: (presetId: number) => Promise<void>;
+  selectOfficialAvatar: () => Promise<void>;
   /** Toggle lesson completion */
   toggleLessonComplete: (lessonId: string, moduleId?: string) => Promise<void>;
   /** Toggle favorite module */
@@ -267,6 +268,7 @@ const OrasContext = createContext<OrasContextValue>({
   togglePreference: async () => {},
   saveCustomAvatar: async () => {},
   selectPresetAvatar: async () => {},
+  selectOfficialAvatar: async () => {},
   toggleLessonComplete: async () => {},
   toggleFavoriteModule: async () => {},
   toggleDownloadModule: async () => {},
@@ -510,13 +512,22 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
       await mutateActiveAccount((acc) => ({
         ...acc,
         useCustomAvatar: true,
+        useOfficialAvatar: false,
         customAvatar: config,
       }));
     },
     [mutateActiveAccount]
   );
 
-  const selectPresetAvatar = useCallback(
+      const selectOfficialAvatar = useCallback(async () => {
+      await mutateActiveAccount((acc) => ({
+        ...acc,
+        useOfficialAvatar: true,
+        useCustomAvatar: false,
+      }));
+    }, [mutateActiveAccount]);
+
+    const selectPresetAvatar = useCallback(
     async (presetId: number) => {
       const preset =
         ANIME_PRESET_AVATARS[presetId] ?? ANIME_PRESET_AVATARS[0];
@@ -524,6 +535,7 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
         ...acc,
         presetAvatarId: presetId,
         useCustomAvatar: false,
+        useOfficialAvatar: false,
         customAvatar: { ...preset.config },
       }));
     },
@@ -1355,6 +1367,7 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
       togglePreference,
       saveCustomAvatar,
       selectPresetAvatar,
+      selectOfficialAvatar,
       toggleLessonComplete,
       toggleFavoriteModule,
       toggleDownloadModule,
@@ -1424,6 +1437,7 @@ export function OrasProvider({ children }: { children: React.ReactNode }) {
       togglePreference,
       saveCustomAvatar,
       selectPresetAvatar,
+      selectOfficialAvatar,
       toggleLessonComplete,
       toggleFavoriteModule,
       toggleDownloadModule,
